@@ -1,0 +1,13 @@
+{
+    "manifest_version": 3,
+    "name": "phpMyAdmin Plus",
+    "description": "Quality-of-life improvements for phpMyAdmin: a ⌘K / Alt+K palette to jump to any database or table, and ⌥←/→ to cycle through tabs.",
+    "version": "0.1.0",
+    "content_scripts": [
+        {
+            "matches": ["<all_urls>"],
+            "js": ["palette-styles.js", "content.js"],
+            "run_at": "document_idle"
+        }
+    ]
+}

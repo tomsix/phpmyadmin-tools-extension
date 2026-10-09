@@ -1,0 +1,10 @@
+{
+    "name": "phpmyadmin-plus",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Chrome and Firefox extension with quality-of-life improvements for phpMyAdmin",
+    "type": "module",
+    "scripts": {
+        "build": "node scripts/build.mjs"
+    }
+}
