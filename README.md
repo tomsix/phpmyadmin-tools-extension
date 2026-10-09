@@ -1,4 +1,4 @@
-# phpMyAdmin Plus
+# phpMyAdmin Tools
 
 A Chrome and Firefox extension that adds quality-of-life features to phpMyAdmin 5.1 and later.
 

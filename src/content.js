@@ -12,7 +12,7 @@
     const isMac = /Mac|iPhone|iPad/.test(navigator.userAgentData?.platform ?? navigator.platform);
     const shortcutLabel = isMac ? '⌘K' : 'Alt+K';
     const baseUrl = new URL('index.php', location.href).href;
-    const cacheKey = `pma-plus:index:${location.host}:${params.server}`;
+    const cacheKey = `pma-tools:index:${location.host}:${params.server}`;
     // Firefox runs content-script fetch() under the extension's origin; content.fetch() uses the page's.
     const pageFetch = typeof content === 'object' && content !== null && typeof content.fetch === 'function'
         ? content.fetch.bind(content)
@@ -381,7 +381,7 @@
 
     function openPalette() {
         const host = document.createElement('div');
-        host.id = 'pma-plus-palette';
+        host.id = 'pma-tools-palette';
         const root = host.attachShadow({ mode: 'closed' });
 
         // Keep keystrokes away from phpMyAdmin's single-key shortcuts on document.
@@ -390,16 +390,16 @@
         }
 
         root.innerHTML = `
-            <style>${PMA_PLUS_PALETTE_CSS}</style>
+            <style>${PMA_TOOLS_PALETTE_CSS}</style>
             <div class="backdrop">
                 <div class="dialog" role="dialog" aria-modal="true" aria-label="Jump to database or table">
                     <div class="search">
                         <input type="text" placeholder="Jump to table or database… (db.table to narrow)"
-                               role="combobox" aria-expanded="true" aria-controls="pma-plus-results"
+                               role="combobox" aria-expanded="true" aria-controls="pma-tools-results"
                                aria-autocomplete="list" autocomplete="off" spellcheck="false">
                         <button type="button" class="status" hidden></button>
                     </div>
-                    <ul class="results" id="pma-plus-results" role="listbox"></ul>
+                    <ul class="results" id="pma-tools-results" role="listbox"></ul>
                     <div class="footer">
                         <span><kbd>↵</kbd> browse</span>
                         <span><kbd>${isMac ? '⌥' : 'Alt'}↵</kbd> structure</span>
@@ -531,7 +531,7 @@
         const items = palette.results.map((result, i) => {
             const item = document.createElement('li');
             item.className = 'item';
-            item.id = `pma-plus-result-${i}`;
+            item.id = `pma-tools-result-${i}`;
             item.setAttribute('role', 'option');
 
             const badge = document.createElement('span');
@@ -609,5 +609,5 @@
         }
     }
 
-    console.debug(`[phpMyAdmin Plus] ${shortcutLabel} opens the quick jump palette.`);
+    console.debug(`[phpMyAdmin Tools] ${shortcutLabel} opens the quick jump palette.`);
 })();

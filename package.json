@@ -1,5 +1,5 @@
 {
-    "name": "phpmyadmin-plus",
+    "name": "phpmyadmin-tools-extension",
     "version": "0.1.0",
     "private": true,
     "description": "Chrome and Firefox extension with quality-of-life improvements for phpMyAdmin",

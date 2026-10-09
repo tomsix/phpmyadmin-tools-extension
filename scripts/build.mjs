@@ -15,7 +15,7 @@ const targets = {
         ...manifest,
         browser_specific_settings: {
             gecko: {
-                id: 'phpmyadmin-plus@webatvantage.be',
+                id: 'phpmyadmin-tools@webatvantage.be',
                 strict_min_version: '115.0',
             },
         },
@@ -29,6 +29,6 @@ for (const [browser, targetManifest] of Object.entries(targets)) {
     mkdirSync(output, { recursive: true });
     cpSync(source, output, { recursive: true, filter: (path) => !path.endsWith('manifest.json') });
     writeFileSync(join(output, 'manifest.json'), `${JSON.stringify(targetManifest, null, 4)}\n`);
-    execFileSync('zip', ['-qr', join(dist, `phpmyadmin-plus-${browser}-${version}.zip`), '.'], { cwd: output });
-    console.log(`Built dist/${browser} and dist/phpmyadmin-plus-${browser}-${version}.zip`);
+    execFileSync('zip', ['-qr', join(dist, `phpmyadmin-tools-${browser}-${version}.zip`), '.'], { cwd: output });
+    console.log(`Built dist/${browser} and dist/phpmyadmin-tools-${browser}-${version}.zip`);
 }

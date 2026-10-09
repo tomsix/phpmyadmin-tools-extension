@@ -1,5 +1,5 @@
 // Loaded before content.js; both share the content-script scope.
-var PMA_PLUS_PALETTE_CSS = `
+var PMA_TOOLS_PALETTE_CSS = `
 :host {
     --bg: #ffffff;
     --fg: #1f2328;
