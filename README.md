@@ -25,19 +25,37 @@ Press **^** / **$** (AZERTY), **[** / **]** (QWERTY), **⌥←** / **⌥→** (m
 
 Ctrl+K is left alone because phpMyAdmin uses it to toggle the SQL console.
 
-## Build
+## Install
+
+Download the zip for your browser from the [latest release](https://github.com/tomsix/phpmyadmin-tools-extension/releases/latest): `phpmyadmin-tools-chrome-<version>.zip` or `phpmyadmin-tools-firefox-<version>.zip`.
+
+### Chrome, Edge and Brave
+
+1. Unzip `phpmyadmin-tools-chrome-<version>.zip` into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't unzip it into Downloads and delete it afterwards.
+2. Open `chrome://extensions` (`edge://extensions` in Edge, `brave://extensions` in Brave).
+3. Turn on **Developer mode** in the top-right corner.
+4. Choose **Load unpacked** and select the folder from step 1, the one that holds `manifest.json`.
+5. Open a phpMyAdmin page and press ⌘K / Alt+K. A phpMyAdmin tab that was already open needs a reload first.
+
+**Updating:** replace the folder's contents with the new release, then click the reload icon on the extension's card in `chrome://extensions`.
+
+### Firefox
+
+Release builds of Firefox only keep signed add-ons, so a manual install lasts until Firefox restarts:
+
+1. Open `about:debugging#/runtime/this-firefox`.
+2. Choose **Load Temporary Add-on…** and select `phpmyadmin-tools-firefox-<version>.zip`. There is no need to unzip it.
+3. Open a phpMyAdmin page and press ⌘K / Alt+K.
+
+For a permanent install, use the add-on from addons.mozilla.org. On Firefox Developer Edition or Nightly you can instead set `xpinstall.signatures.required` to `false` in `about:config`, rename the zip to `.xpi` and install it through **Install Add-on From File…** in `about:addons`.
+
+### From source
 
 ```bash
 npm run build
 ```
 
-This writes `dist/chrome/` and `dist/firefox/`, plus a zip of each. The only difference between them is the Firefox `browser_specific_settings` block. No dependencies are needed beyond Node and `zip`.
-
-## Install
-
-**Chrome / Edge / Brave:** open `chrome://extensions`, enable *Developer mode*, choose *Load unpacked* and select `dist/chrome`.
-
-**Firefox:** open `about:debugging#/runtime/this-firefox`, choose *Load Temporary Add-on…* and select `dist/firefox/manifest.json`. A temporary add-on is removed when Firefox restarts. A permanent install needs the zip signed as an unlisted add-on on addons.mozilla.org, or a Developer Edition / Nightly build with `xpinstall.signatures.required` set to `false`.
+This writes `dist/chrome/` and `dist/firefox/`, plus a zip of each, named after the version in `package.json`. Load `dist/chrome` or `dist/firefox/manifest.json` as above. The two builds differ only in the Firefox `browser_specific_settings` block, and nothing is needed beyond Node and `zip`.
 
 ## How it detects phpMyAdmin
 
