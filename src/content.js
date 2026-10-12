@@ -164,9 +164,8 @@
     }
 
     function stripTags(html) {
-        const element = document.createElement('div');
-        element.innerHTML = String(html);
-        return element.textContent.trim();
+        // A DOMParser document is inert: no scripts run and no images load while it is parsed.
+        return new DOMParser().parseFromString(String(html), 'text/html').body.textContent.trim();
     }
 
     function asList(value) {
@@ -389,8 +388,9 @@
             host.addEventListener(type, (event) => event.stopPropagation());
         }
 
+        const style = document.createElement('style');
+        style.textContent = PMA_TOOLS_PALETTE_CSS;
         root.innerHTML = `
-            <style>${PMA_TOOLS_PALETTE_CSS}</style>
             <div class="backdrop">
                 <div class="dialog" role="dialog" aria-modal="true" aria-label="Jump to database or table">
                     <div class="search">
@@ -402,13 +402,16 @@
                     <ul class="results" id="pma-tools-results" role="listbox"></ul>
                     <div class="footer">
                         <span><kbd>↵</kbd> browse</span>
-                        <span><kbd>${isMac ? '⌥' : 'Alt'}↵</kbd> structure</span>
-                        <span><kbd>${isMac ? '⌘' : 'Ctrl'}↵</kbd> new tab</span>
+                        <span><kbd data-key="structure"></kbd> structure</span>
+                        <span><kbd data-key="new-tab"></kbd> new tab</span>
                         <span><kbd>⇥</kbd> complete</span>
                         <span><kbd>esc</kbd> close</span>
                     </div>
                 </div>
             </div>`;
+        root.prepend(style);
+        root.querySelector('[data-key="structure"]').textContent = `${isMac ? '⌥' : 'Alt'}↵`;
+        root.querySelector('[data-key="new-tab"]').textContent = `${isMac ? '⌘' : 'Ctrl'}↵`;
 
         const input = root.querySelector('input');
         const status = root.querySelector('.status');
