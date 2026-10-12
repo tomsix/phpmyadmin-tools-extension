@@ -27,7 +27,7 @@ Ctrl+K is left alone because phpMyAdmin uses it to toggle the SQL console.
 
 ## Install
 
-Download the zip for your browser from the [latest release](https://github.com/tomsix/phpmyadmin-tools-extension/releases/latest): `phpmyadmin-tools-chrome-<version>.zip` or `phpmyadmin-tools-firefox-<version>.zip`.
+Download the zip for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases): `phpmyadmin-tools-chrome-<version>.zip` or `phpmyadmin-tools-firefox-<version>.zip`.
 
 ### Chrome, Edge and Brave
 
