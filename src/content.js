@@ -116,15 +116,54 @@
             if (start === -1) {
                 continue;
             }
-            const result = {};
-            const pattern = /(\w+):"((?:[^"\\]|\\.)*)"/g;
-            const body = source.slice(start, source.indexOf('});', start));
-            for (const match of body.matchAll(pattern)) {
-                result[match[1]] = match[2].replace(/\\n/g, '\n').replace(/\\(.)/g, '$1');
+            const body = extractObjectLiteral(source, start + 'CommonParams.setAll('.length);
+            const result = parseJsonParams(body) ?? parseLegacyParams(body);
+            if (result.server === undefined || result.server === null) {
+                return null;
             }
-            return typeof result.server === 'string' ? result : null;
+            return Object.fromEntries(Object.entries(result).map(([key, value]) => [key, String(value)]));
         }
         return null;
+    }
+
+    function extractObjectLiteral(source, openBrace) {
+        let depth = 0;
+        let quote = null;
+        for (let i = openBrace; i < source.length; i++) {
+            const character = source[i];
+            if (quote !== null) {
+                if (character === '\\') {
+                    i++;
+                } else if (character === quote) {
+                    quote = null;
+                }
+            } else if (character === '"' || character === "'") {
+                quote = character;
+            } else if (character === '{') {
+                depth++;
+            } else if (character === '}' && --depth === 0) {
+                return source.slice(openBrace, i + 1);
+            }
+        }
+        return '';
+    }
+
+    // phpMyAdmin 6 writes the parameters as JSON.
+    function parseJsonParams(body) {
+        try {
+            return JSON.parse(body);
+        } catch {
+            return null;
+        }
+    }
+
+    // phpMyAdmin 5 writes them as a JavaScript object literal with unquoted keys: {server:"1",db:""}.
+    function parseLegacyParams(body) {
+        const result = {};
+        for (const match of body.matchAll(/(\w+):"((?:[^"\\]|\\.)*)"/g)) {
+            result[match[1]] = match[2].replace(/\\n/g, '\n').replace(/\\(.)/g, '$1');
+        }
+        return result;
     }
 
     function getToken() {
