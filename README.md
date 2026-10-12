@@ -42,3 +42,7 @@ This writes `dist/chrome/` and `dist/firefox/`, plus a zip of each. The only dif
 ## How it detects phpMyAdmin
 
 The content script runs on every page, because phpMyAdmin lives on arbitrary hosts. It stops immediately unless the page has both `#pma_navigation` and the inline `CommonParams.setAll({…})` script, so nothing is added to other sites.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
