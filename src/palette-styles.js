@@ -14,7 +14,7 @@ var PMA_TOOLS_PALETTE_CSS = `
 }
 
 @media (prefers-color-scheme: dark) {
-    :host {
+    :host(:not([data-theme="light"])) {
         --bg: #1c2128;
         --fg: #e6edf3;
         --muted: #8d96a0;
@@ -25,6 +25,18 @@ var PMA_TOOLS_PALETTE_CSS = `
         --backdrop: rgb(0 0 0 / 0.5);
         --shadow: 0 12px 40px rgb(0 0 0 / 0.5);
     }
+}
+
+:host([data-theme="dark"]) {
+        --bg: #1c2128;
+        --fg: #e6edf3;
+        --muted: #8d96a0;
+        --border: #373e47;
+        --hover: #262c36;
+        --active: #1f3a5f;
+        --accent: #6cb6ff;
+        --backdrop: rgb(0 0 0 / 0.5);
+        --shadow: 0 12px 40px rgb(0 0 0 / 0.5);
 }
 
 .backdrop {

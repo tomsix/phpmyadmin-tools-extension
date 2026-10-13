@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>phpMyAdmin Tools settings</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --fg: #1f2328;
+            --muted: #656d76;
+            --border: #d0d7de;
+            --chip: #f3f4f6;
+            --accent: #0b5cd5;
+            --danger: #b42318;
+            color-scheme: light dark;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #1c2128;
+                --fg: #e6edf3;
+                --muted: #8d96a0;
+                --border: #373e47;
+                --chip: #262c36;
+                --accent: #6cb6ff;
+                --danger: #ff7b72;
+            }
+        }
+
+        :root[data-theme="light"] {
+            color-scheme: light;
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #1c2128;
+            --fg: #e6edf3;
+            --muted: #8d96a0;
+            --border: #373e47;
+            --chip: #262c36;
+            --accent: #6cb6ff;
+            --danger: #ff7b72;
+        }
+
+        body {
+            max-width: 640px;
+            margin: 0 auto;
+            padding: 24px 16px;
+            background: var(--bg);
+            color: var(--fg);
+            font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        header img {
+            flex: none;
+            padding: 4px;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        section + section {
+            margin-top: 40px;
+        }
+
+        h2 {
+            margin: 0 0 4px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        p {
+            margin: 0 0 16px;
+            color: var(--muted);
+        }
+
+        .action {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 16px;
+            padding: 14px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .action-label {
+            flex: 1 1 200px;
+            font-weight: 500;
+        }
+
+        .bindings {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 4px 2px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--chip);
+            font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        button {
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+            cursor: pointer;
+        }
+
+        button:hover {
+            border-color: var(--muted);
+        }
+
+        button:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .chip button {
+            padding: 0 6px;
+            border: 0;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .add.recording {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .choices {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 20px;
+            min-width: 0;
+            margin: 0;
+            padding: 14px 0;
+            border: 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip-path: inset(50%);
+            white-space: nowrap;
+        }
+
+        .choices label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .footer {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+
+        .status {
+            color: var(--muted);
+        }
+
+        .status.error {
+            color: var(--danger);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="icons/icon-128.png" alt="" width="48" height="48">
+        <h1>phpMyAdmin Tools settings</h1>
+    </header>
+
+    <section aria-labelledby="shortcuts-heading">
+        <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
+        <p>Click <strong>Add</strong>, then press the key combination. Keys are matched by their position on the keyboard, not by the character they type. A shortcut without Ctrl, Alt or ⌘ is ignored while you type in a field.</p>
+
+        <div id="shortcut-actions"></div>
+
+        <div class="footer">
+            <button type="button" id="reset-shortcuts">Reset shortcuts to defaults</button>
+            <span class="status" id="shortcuts-status" role="status"></span>
+        </div>
+    </section>
+
+    <section aria-labelledby="appearance-heading">
+        <h2 id="appearance-heading">Appearance</h2>
+        <p>The colours of the quick jump palette and of this page.</p>
+
+        <fieldset class="choices" id="theme-choices">
+            <legend class="visually-hidden">Colour theme</legend>
+            <label><input type="radio" name="theme" value="system"> Follow the system or browser</label>
+            <label><input type="radio" name="theme" value="light"> Light</label>
+            <label><input type="radio" name="theme" value="dark"> Dark</label>
+        </fieldset>
+        <span class="status" id="appearance-status" role="status"></span>
+    </section>
+
+    <section aria-labelledby="search-heading">
+        <h2 id="search-heading">Search</h2>
+        <p>The operator a text column starts with on a table's Search tab. phpMyAdmin itself always starts with <code>LIKE</code>, which only finds exact matches unless you type the <code>%</code> yourself.</p>
+
+        <fieldset class="choices" id="search-operator-choices">
+            <legend class="visually-hidden">Default operator for text columns</legend>
+            <label><input type="radio" name="search-operator" value="LIKE %...%"> <code>LIKE %...%</code> — contains</label>
+            <label><input type="radio" name="search-operator" value="LIKE"> <code>LIKE</code> — phpMyAdmin's default</label>
+        </fieldset>
+        <span class="status" id="search-status" role="status"></span>
+    </section>
+
+    <script src="shortcuts.js"></script>
+    <script src="preferences.js"></script>
+    <script src="options.js"></script>
+</body>
+</html>

@@ -3,14 +3,18 @@
     const CACHE_TTL = 5 * 60 * 1000;
     const CONCURRENCY = 6;
     const MAX_RESULTS = 50;
+    // Overflowing tabs move into a "More" dropdown, whose own toggle is not a tab.
+    const TAB_LINK_SELECTOR = '#topmenu > li:not(.dropdown) > a.nav-link, #topmenu .dropdown-menu > li > a.nav-link';
 
     const params = readCommonParams();
     if (params === null || document.getElementById('pma_navigation') === null) {
         return;
     }
 
-    const isMac = /Mac|iPhone|iPad/.test(navigator.userAgentData?.platform ?? navigator.platform);
-    const shortcutLabel = isMac ? '⌘K' : 'Alt+K';
+    const isMac = PMA_TOOLS_SHORTCUTS.isMac;
+    let shortcuts = PMA_TOOLS_SHORTCUTS.DEFAULTS;
+    let theme = 'system';
+    const columnCache = new Map();
     const baseUrl = new URL('index.php', location.href).href;
     const cacheKey = `pma-tools:index:${location.host}:${params.server}`;
     // Firefox runs content-script fetch() under the extension's origin; content.fetch() uses the page's.
@@ -28,11 +32,32 @@
     };
 
     let palette = null;
+    const tabCache = new Map();
     // False while the focused field was focused by the page itself (the SQL tab's editor), not by the user.
     let isFocusUserDriven = false;
     let lastUserGestureAt = 0;
 
     restoreIndex();
+    addIndicator();
+
+    PMA_TOOLS_SHORTCUTS.load().then((loaded) => {
+        shortcuts = loaded;
+    });
+    PMA_TOOLS_SHORTCUTS.onChange((changed) => {
+        shortcuts = changed;
+    });
+    PMA_TOOLS_PREFERENCES.load('theme').then((loaded) => {
+        theme = loaded;
+    });
+    PMA_TOOLS_PREFERENCES.onChange('theme', (changed) => {
+        theme = changed;
+        if (palette !== null) {
+            PMA_TOOLS_PREFERENCES.applyTheme(palette.host, theme);
+        }
+    });
+
+    prepareSearchPage();
+    window.addEventListener('hashchange', prepareSearchPage);
 
     window.addEventListener('pointerdown', () => {
         lastUserGestureAt = Date.now();
@@ -44,10 +69,10 @@
     }, true);
 
     window.addEventListener('keydown', (event) => {
-        const isShortcut = event.code === 'KeyK' && (isMac
-            ? event.metaKey && !event.ctrlKey && !event.altKey
-            : event.altKey && !event.ctrlKey && !event.metaKey);
-        if (!isShortcut) {
+        const shortcut = shortcuts.openPalette.find((item) => PMA_TOOLS_SHORTCUTS.matches(item, event));
+        // A shortcut without Ctrl, Alt or Cmd would otherwise fire while typing, in a field or in the palette.
+        if (shortcut === undefined
+            || (!PMA_TOOLS_SHORTCUTS.hasModifier(shortcut) && (palette !== null || isTyping(event)))) {
             return;
         }
         event.preventDefault();
@@ -68,12 +93,10 @@
             }
             return;
         }
-        if (event.repeat || palette !== null || (isFocusUserDriven && isEditable(event.composedPath()[0]))) {
+        if (event.repeat || palette !== null || isTyping(event)) {
             return;
         }
-        const tabs = [...document.querySelectorAll(
-            '#topmenu > li:not(.dropdown) > a.nav-link, #topmenu .dropdown-menu > li > a.nav-link',
-        )];
+        const tabs = [...document.querySelectorAll(TAB_LINK_SELECTOR)];
         if (tabs.length < 2) {
             return;
         }
@@ -86,22 +109,94 @@
         location.assign(tabs[next].href);
     }, true);
 
+    function addIndicator() {
+        const icons = document.getElementById('page_nav_icons');
+        if (icons === null || document.getElementById('pma-tools-indicator') !== null) {
+            return;
+        }
+        const extensionApi = globalThis.browser ?? globalThis.chrome;
+
+        const link = document.createElement('a');
+        link.id = 'pma-tools-indicator';
+        link.href = '#';
+        link.title = 'phpMyAdmin Tools — settings';
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            extensionApi.runtime.sendMessage({ type: 'open-options' });
+        });
+
+        const image = document.createElement('img');
+        image.src = extensionApi.runtime.getURL('icons/icon-32.png');
+        image.alt = 'phpMyAdmin Tools settings';
+        image.width = 16;
+        image.height = 16;
+        link.append(image);
+        // A white backing keeps the logo legible on phpMyAdmin's grey top bar.
+        link.style.backgroundColor = '#fff';
+
+        // phpMyAdmin 6 shows its icons as small outlined buttons in a Bootstrap row; 5 as bare inline icons.
+        if (icons.classList.contains('row')) {
+            link.className = 'btn btn-sm btn-outline-secondary';
+            const column = document.createElement('div');
+            column.className = 'col-12';
+            column.append(link);
+            icons.prepend(column);
+        } else {
+            Object.assign(link.style, {
+                display: 'inline-flex',
+                alignItems: 'center',
+                verticalAlign: 'middle',
+                marginRight: '6px',
+                padding: '2px',
+                borderRadius: '4px',
+            });
+            icons.prepend(link);
+        }
+    }
+
+    async function prepareSearchPage() {
+        if (new URLSearchParams(location.search).get('route') !== '/table/search') {
+            return;
+        }
+        const operator = await PMA_TOOLS_PREFERENCES.load('searchOperator');
+        const columnInputs = [...document.querySelectorAll('input[name^="criteriaColumnNames["]')];
+        columnInputs.forEach((input, i) => {
+            const select = document.querySelector(`select[name="criteriaColumnOperators[${i}]"]`);
+            // Only replace phpMyAdmin's own default, and only on a column that offers the operator (text columns).
+            if (select !== null && select.selectedIndex === 0 && select.value !== operator
+                && [...select.options].some((option) => option.value === operator)) {
+                select.value = operator;
+                select.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+
+        const match = location.hash.match(/^#pma-tools-column=(.*)$/);
+        if (match === null) {
+            return;
+        }
+        history.replaceState(null, '', location.pathname + location.search);
+        const column = decodeURIComponent(match[1]);
+        const columnIndex = columnInputs.findIndex((input) => input.value === column);
+        const field = document.querySelector(`[name="criteriaValues[${columnIndex}]"]`);
+        if (columnIndex !== -1 && field !== null) {
+            field.scrollIntoView({ block: 'center' });
+            field.focus();
+            isFocusUserDriven = true;
+        }
+    }
+
     function getTabDirection(event) {
-        const hasModifier = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-
-        // Physical key positions: [ / ] on QWERTY, ^ / $ on AZERTY.
-        const bareKeyDirection = { BracketLeft: -1, BracketRight: 1 }[event.code];
-        if (bareKeyDirection !== undefined && !hasModifier) {
-            return bareKeyDirection;
+        if (shortcuts.previousTab.some((item) => PMA_TOOLS_SHORTCUTS.matches(item, event))) {
+            return -1;
         }
-
-        // Alt+←/→ is browser back/forward on Windows and Linux, hence the extra Shift there.
-        const arrowDirection = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
-        if (arrowDirection !== undefined && event.altKey && !event.ctrlKey && !event.metaKey && event.shiftKey === !isMac) {
-            return arrowDirection;
+        if (shortcuts.nextTab.some((item) => PMA_TOOLS_SHORTCUTS.matches(item, event))) {
+            return 1;
         }
-
         return null;
+    }
+
+    function isTyping(event) {
+        return isFocusUserDriven && isEditable(event.composedPath()[0]);
     }
 
     function isEditable(element) {
@@ -172,6 +267,12 @@
 
     function getCurrentDatabase() {
         return new URLSearchParams(location.search).get('db') || params.db || '';
+    }
+
+    function getCurrentTable() {
+        const query = new URLSearchParams(location.search);
+        // A url naming a db without a table is a database page, whatever the page parameters still say.
+        return query.has('db') ? query.get('table') ?? '' : params.table || '';
     }
 
     async function post(route, data = {}) {
@@ -330,6 +431,178 @@
     }
 
     function search(rawQuery) {
+        const parts = rawQuery.split('/');
+        if (parts.length >= 3) {
+            return searchColumns(parts[0].trim(), parts[1].trim().toLowerCase(), parts.slice(2).join('/').trim().toLowerCase());
+        }
+        if (parts.length === 2) {
+            return searchTabs(parts[0].trim(), parts[1].trim().toLowerCase());
+        }
+        return { results: searchItems(rawQuery), message: null };
+    }
+
+    function searchColumns(targetQuery, tabQuery, columnQuery) {
+        const found = findTarget(targetQuery);
+        if (found.target === null) {
+            return { results: [], message: found.message };
+        }
+        const target = found.target;
+        if (target.table === '') {
+            return { results: [], message: 'Columns can only be searched on a table\'s Search tab' };
+        }
+        const tabs = target.current ? { status: 'done', tabs: readTabs(document) } : getTabs(target);
+        if (tabs.status !== 'done') {
+            return { results: [], message: tabs.status === 'loading' ? 'Loading tabs…' : tabs.error };
+        }
+        const searchTab = tabs.tabs.find((tab) => getRoute(tab.url) === '/table/search');
+        if (searchTab === undefined || score(searchTab.label, tabQuery) === null) {
+            return {
+                results: [],
+                message: searchTab === undefined
+                    ? 'This table has no Search tab'
+                    : `Columns are listed after the Search tab: ${getTargetText(target)}/${searchTab.label}/`,
+            };
+        }
+
+        const columns = getColumns(target, searchTab.url);
+        if (columns.status !== 'done') {
+            return { results: [], message: columns.status === 'loading' ? 'Loading columns…' : columns.error };
+        }
+        const results = [];
+        columns.columns.forEach((column, position) => {
+            const match = score(column, columnQuery);
+            if (match !== null) {
+                results.push({
+                    type: 'column',
+                    ...target,
+                    column,
+                    tabLabel: searchTab.label,
+                    url: searchTab.url,
+                    position,
+                    score: match.score,
+                    columnPositions: match.positions,
+                });
+            }
+        });
+        results.sort((a, b) => b.score - a.score || a.position - b.position);
+        return { results: results.slice(0, MAX_RESULTS), message: results.length === 0 ? 'No matching columns' : null };
+    }
+
+    function findTarget(targetQuery) {
+        if (targetQuery === '') {
+            return { target: { db: getCurrentDatabase(), table: getCurrentTable(), current: true }, message: null };
+        }
+        const target = resolveTarget(targetQuery);
+        return {
+            target,
+            message: target !== null ? null
+                : index.loading !== null ? 'Loading…' : `No database or table matches "${targetQuery}"`,
+        };
+    }
+
+    function getRoute(url) {
+        return new URL(url).searchParams.get('route');
+    }
+
+    function getColumns(target, searchUrl) {
+        const key = `${target.db}\u0000${target.table}`;
+        if (!columnCache.has(key)) {
+            columnCache.set(key, { status: 'loading', columns: [], error: '' });
+            const url = new URL(searchUrl);
+            url.searchParams.set('ajax_request', 'true');
+            pageFetch(url.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((response) => response.json())
+                .then((response) => {
+                    const page = new DOMParser().parseFromString(String(response.message ?? ''), 'text/html');
+                    const columns = [...page.querySelectorAll('input[name^="criteriaColumnNames["]')].map((input) => input.value);
+                    columnCache.set(key, { status: 'done', columns, error: '' });
+                })
+                .catch(() => {
+                    columnCache.set(key, { status: 'error', columns: [], error: 'Couldn\'t load the columns — has the session expired?' });
+                })
+                .finally(render);
+        }
+        return columnCache.get(key);
+    }
+
+    function searchTabs(targetQuery, tabQuery) {
+        const { target, message } = findTarget(targetQuery);
+        if (target === null) {
+            return { results: [], message };
+        }
+        const tabs = target.current ? { status: 'done', tabs: readTabs(document) } : getTabs(target);
+        if (tabs.status !== 'done') {
+            return { results: [], message: tabs.status === 'loading' ? 'Loading tabs…' : tabs.error };
+        }
+
+        const results = [];
+        tabs.tabs.forEach((tab, position) => {
+            const match = score(tab.label, tabQuery);
+            if (match !== null) {
+                results.push({ type: 'tab', ...target, ...tab, position, score: match.score, tabPositions: match.positions });
+            }
+        });
+        results.sort((a, b) => b.score - a.score || a.position - b.position);
+        return { results, message: results.length === 0 ? 'No matching tabs' : null };
+    }
+
+    function resolveTarget(targetQuery) {
+        const query = targetQuery.toLowerCase();
+        if (query === '') {
+            return null;
+        }
+        const separator = query.indexOf('.');
+        if (separator === -1) {
+            const database = index.databases.find((name) => name.toLowerCase() === query)
+                ?? searchItems(query).find((result) => result.type === 'db')?.db;
+            return database === undefined ? null : { db: database, table: '' };
+        }
+        const exact = index.tables.find((entry) => entry.db.toLowerCase() === query.slice(0, separator)
+            && entry.table.toLowerCase() === query.slice(separator + 1));
+        const entry = exact ?? searchItems(query).find((result) => result.type === 'table');
+        return entry === undefined ? null : { db: entry.db, table: entry.table };
+    }
+
+    function getTabs(target) {
+        const key = `${target.db}\u0000${target.table}`;
+        if (!tabCache.has(key)) {
+            tabCache.set(key, { status: 'loading', tabs: [], error: '' });
+            // Every phpMyAdmin AJAX response carries the tab bar of the db and table it was asked about.
+            post('/tables', target.table === '' ? { db: target.db } : { db: target.db, table: target.table })
+                .then((response) => {
+                    tabCache.set(key, { status: 'done', tabs: parseTabs(response.menu), error: '' });
+                })
+                .catch((error) => {
+                    tabCache.set(key, { status: 'error', tabs: [], error: error.message });
+                })
+                .finally(render);
+        }
+        return tabCache.get(key);
+    }
+
+    function parseTabs(menuHtml) {
+        return readTabs(new DOMParser().parseFromString(String(menuHtml ?? ''), 'text/html'));
+    }
+
+    function readTabs(root) {
+        return [...root.querySelectorAll(TAB_LINK_SELECTOR)].map((link) => {
+            const text = link.cloneNode(true);
+            text.querySelectorAll('.visually-hidden, .sr-only').forEach((element) => element.remove());
+            return {
+                label: text.textContent.replace(/\s+/g, ' ').trim(),
+                url: new URL(link.getAttribute('href'), baseUrl).href,
+            };
+        });
+    }
+
+    function getTargetText(result) {
+        if (result.db === '') {
+            return 'server';
+        }
+        return (result.table ?? '') === '' ? result.db : `${result.db}.${result.table}`;
+    }
+
+    function searchItems(rawQuery) {
         const query = rawQuery.trim().toLowerCase();
         const currentDatabase = getCurrentDatabase();
         const results = [];
@@ -391,6 +664,12 @@
     }
 
     function urlFor(result, structure) {
+        if (result.type === 'tab') {
+            return result.url;
+        }
+        if (result.type === 'column') {
+            return `${result.url}#pma-tools-column=${encodeURIComponent(result.column)}`;
+        }
         const url = new URL(baseUrl);
         url.searchParams.set('server', params.server);
         url.searchParams.set('db', result.db);
@@ -420,6 +699,7 @@
     function openPalette() {
         const host = document.createElement('div');
         host.id = 'pma-tools-palette';
+        PMA_TOOLS_PREFERENCES.applyTheme(host, theme);
         const root = host.attachShadow({ mode: 'closed' });
 
         // Keep keystrokes away from phpMyAdmin's single-key shortcuts on document.
@@ -433,7 +713,7 @@
             <div class="backdrop">
                 <div class="dialog" role="dialog" aria-modal="true" aria-label="Jump to database or table">
                     <div class="search">
-                        <input type="text" placeholder="Jump to table or database… (db.table to narrow)"
+                        <input type="text" placeholder="Jump to table or database… (db.table to narrow, / for tabs)"
                                role="combobox" aria-expanded="true" aria-controls="pma-tools-results"
                                aria-autocomplete="list" autocomplete="off" spellcheck="false">
                         <button type="button" class="status" hidden></button>
@@ -444,6 +724,7 @@
                         <span><kbd data-key="structure"></kbd> structure</span>
                         <span><kbd data-key="new-tab"></kbd> new tab</span>
                         <span><kbd>⇥</kbd> complete</span>
+                        <span><kbd>/</kbd> tabs</span>
                         <span><kbd>esc</kbd> close</span>
                     </div>
                 </div>
@@ -516,8 +797,7 @@
             event.preventDefault();
             const result = palette.results[palette.selected];
             if (result !== undefined) {
-                // A database completes to "db." so the table can be typed straight after it.
-                palette.input.value = result.type === 'table' ? `${result.db}.${result.table}` : `${result.db}.`;
+                palette.input.value = getCompletion(result, palette.input.value);
                 palette.selected = 0;
                 render();
             }
@@ -531,6 +811,21 @@
                 });
             }
         }
+    }
+
+    function getCompletion(result, currentValue) {
+        const prefix = result.current ? '' : getTargetText(result);
+        if (result.type === 'column') {
+            return `${prefix}/${result.tabLabel}/${result.column}`;
+        }
+        if (result.type === 'tab') {
+            // A second Tab on the Search tab moves on to its columns.
+            const completion = `${prefix}/${result.label}`;
+            return currentValue === completion && getRoute(result.url) === '/table/search' ? `${completion}/` : completion;
+        }
+        // A database completes to "db." so the table can be typed after it; a second Tab opens the tab list.
+        const completion = result.type === 'table' ? `${result.db}.${result.table}` : `${result.db}.`;
+        return currentValue === completion ? `${getTargetText(result)}/` : completion;
     }
 
     function highlight(text, positions) {
@@ -566,7 +861,8 @@
         if (palette === null) {
             return;
         }
-        palette.results = search(palette.input.value);
+        const { results, message } = search(palette.input.value);
+        palette.results = results;
         palette.selected = Math.min(palette.selected, Math.max(palette.results.length - 1, 0));
 
         const currentDatabase = getCurrentDatabase();
@@ -578,11 +874,21 @@
 
             const badge = document.createElement('span');
             badge.className = 'badge';
-            badge.textContent = result.type === 'db' ? 'db' : 'tbl';
+            badge.textContent = { db: 'db', table: 'tbl', tab: 'tab', column: 'col' }[result.type];
 
             const label = document.createElement('span');
             label.className = 'label';
-            if (result.type === 'table') {
+            if (result.type === 'column') {
+                const prefix = document.createElement('span');
+                prefix.className = 'db';
+                prefix.textContent = `${getTargetText(result)} / ${result.tabLabel} / `;
+                label.append(prefix, highlight(result.column, result.columnPositions));
+            } else if (result.type === 'tab') {
+                const target = document.createElement('span');
+                target.className = 'db';
+                target.textContent = `${getTargetText(result)} / `;
+                label.append(target, highlight(result.label, result.tabPositions));
+            } else if (result.type === 'table') {
                 const database = document.createElement('span');
                 database.className = 'db';
                 database.append(highlight(result.db, result.dbPositions), '.');
@@ -617,9 +923,9 @@
         if (items.length === 0) {
             const empty = document.createElement('li');
             empty.className = 'empty';
-            empty.textContent = index.error !== ''
+            empty.textContent = message ?? (index.error !== ''
                 ? index.error
-                : index.loading !== null ? 'Loading…' : 'No matching databases or tables';
+                : index.loading !== null ? 'Loading…' : 'No matching databases or tables');
             items.push(empty);
         }
         palette.list.replaceChildren(...items);
@@ -651,5 +957,5 @@
         }
     }
 
-    console.debug(`[phpMyAdmin Tools] ${shortcutLabel} opens the quick jump palette.`);
+    console.debug('[phpMyAdmin Tools] loaded; shortcuts are set on the extension\'s options page.');
 })();

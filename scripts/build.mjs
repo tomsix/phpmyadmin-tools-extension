@@ -10,9 +10,13 @@ const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
 const manifest = { ...JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8')), version };
 
 const targets = {
-    chrome: manifest,
+    chrome: {
+        ...manifest,
+        background: { service_worker: 'background.js' },
+    },
     firefox: {
         ...manifest,
+        background: { scripts: ['background.js'] },
         browser_specific_settings: {
             gecko: {
                 id: 'phpmyadmin-tools@netwerk64.be',

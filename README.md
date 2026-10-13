@@ -6,7 +6,7 @@ A Chrome and Firefox extension that adds quality-of-life features to phpMyAdmin 
 
 ## Quick jump
 
-Press **⌘K** (macOS) or **Alt+K** (Windows/Linux) on any phpMyAdmin page to open a palette that fuzzy-searches every database and table on the server.
+Press **⌘K** (macOS) or **Alt+K** (Windows/Linux) — or [your own shortcut](#changing-the-shortcuts) — on any phpMyAdmin page to open a palette that fuzzy-searches every database and table on the server.
 
 | Key | Action |
 | --- | --- |
@@ -14,18 +14,35 @@ Press **⌘K** (macOS) or **Alt+K** (Windows/Linux) on any phpMyAdmin page to op
 | `⌥↵` / `Alt↵` | Open the table's structure |
 | `⌘↵` / `Ctrl↵` | Open in a new tab |
 | `↑` `↓` | Move the selection |
-| `⇥` | Complete the search to the selected item (`db.table`, or `db.` for a database) |
+| `⇥` | Complete the search to the selected item (`db.table`, or `db.` for a database); press it again to list that item's tabs |
 | `esc` | Close |
 
-Type `shop.ord` to narrow to tables matching `ord` in databases matching `shop`. With an empty query the palette lists the current database's tables, then every database.
+Type `shop.ord` to narrow to tables matching `ord` in databases matching `shop`. Add a `/` to list a database's or table's tabs: `shop/` shows the tabs of the `shop` database, `shop.orders/` those of its `orders` table, and `shop.orders/str` narrows them to Structure. A `/` on its own lists the tabs of the page you are on: the current table's, the current database's, or the server's on the home page. Pressing Tab twice on a result gets you there: once to complete the name, once to add the `/`. On a table's Search tab, a second `/` lists its columns: `shop.orders/Search/mail` opens the Search tab with the cursor in the `email` column's field, and `//mail` does the same for the table you are on. Tab names follow your phpMyAdmin language (`Zoeken`, `Rechercher`), but any part of the name works. With an empty query the palette lists the current database's tables, then every database.
 
 The index is built through phpMyAdmin's own `/databases` and `/tables` AJAX routes, using the session and token of the open page. It is cached per tab for 5 minutes. Click the counter next to the search field to rebuild it. System schemas are listed as databases, but their tables are not indexed.
 
 ## Tab cycling
 
-Press **^** / **$** (AZERTY), **[** / **]** (QWERTY), **⌥←** / **⌥→** (macOS) or **Alt+Shift+←** / **Alt+Shift+→** (Windows/Linux) to move to the previous or next tab of the current table, database or server (Browse, Structure, SQL, …), wrapping around at either end. Tabs collapsed into phpMyAdmin's *More* menu are included. The bare keys match the key's position, not its character, so they need no modifier on either layout. The shortcuts are ignored while typing in a field or the SQL editor — but not in a field the page focused on its own, like the SQL tab's editor, until you click or type in it.
+Press **⌥←** / **⌥→** (macOS) or **Alt+Shift+←** / **Alt+Shift+→** (Windows/Linux) by default, to move to the previous or next tab of the current table, database or server (Browse, Structure, SQL, …), wrapping around at either end. Tabs collapsed into phpMyAdmin's *More* menu are included. The shortcuts are ignored while typing in a field or the SQL editor — but not in a field the page focused on its own, like the SQL tab's editor, until you click or type in it. To jump to one specific tab, type `/` in the palette instead.
 
-Ctrl+K is left alone because phpMyAdmin uses it to toggle the SQL console.
+## Changing the shortcuts
+
+The shortcuts to open the palette and to go to the previous or next tab can be changed on the extension's options page:
+
+- **Chrome, Edge, Brave:** right-click the extension's icon and choose **Options**, or open **Details → Extension options** in `chrome://extensions`.
+- **Firefox:** open `about:addons`, choose phpMyAdmin Tools and go to the **Options** tab.
+
+Each action can have several key combinations. Click **Add** and press the combination; **×** removes one, and **Reset to defaults** restores the ones above. A combination that is already used by another action is refused. Shortcuts are matched by key position, like the defaults, and one without Ctrl, Alt or ⌘ is ignored while you type in a field. The settings are saved with your browser profile's sync storage, and open phpMyAdmin tabs pick up a change immediately. The keys inside the palette (Enter, Tab, the arrows and Esc) are fixed.
+
+## Search operator
+
+phpMyAdmin's Search tab always starts a text column on `LIKE`, which only finds exact matches unless you type the `%` yourself, and phpMyAdmin has no setting to change that. The extension switches text columns to `LIKE %...%` (contains) when the Search tab opens. Choose `LIKE` under **Search** on the options page to keep phpMyAdmin's default. A column you already set yourself, and number or date columns, are left alone.
+
+## Appearance
+
+The quick jump palette and the options page follow the system or browser's light or dark setting. To always use one of the two, choose **Light** or **Dark** under **Appearance** on the options page; open phpMyAdmin tabs switch immediately. phpMyAdmin's own pages keep their theme.
+
+The default ⌘K / Alt+K leaves Ctrl+K alone, because phpMyAdmin uses it to toggle the SQL console.
 
 ## Install
 

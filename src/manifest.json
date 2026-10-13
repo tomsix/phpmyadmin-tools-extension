@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "phpMyAdmin Tools",
-    "description": "Quality-of-life improvements for phpMyAdmin: a ⌘K / Alt+K palette to jump to any database or table, and ⌥←/→ to cycle through tabs.",
+    "description": "Keyboard navigation for phpMyAdmin: a palette to jump to any database, table or tab, and configurable shortcuts to cycle through tabs.",
     "version": "0.1.2",
     "icons": {
         "16": "icons/icon-16.png",
@@ -9,16 +9,35 @@
         "48": "icons/icon-48.png",
         "128": "icons/icon-128.png"
     },
+    "permissions": [
+        "storage"
+    ],
+    "options_ui": {
+        "page": "options.html",
+        "open_in_tab": true
+    },
     "content_scripts": [
         {
             "matches": [
                 "<all_urls>"
             ],
             "js": [
+                "shortcuts.js",
+                "preferences.js",
                 "palette-styles.js",
                 "content.js"
             ],
             "run_at": "document_idle"
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "icons/icon-32.png"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
         }
     ]
 }
