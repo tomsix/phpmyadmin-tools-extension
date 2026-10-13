@@ -1,6 +1,6 @@
 {
     "name": "phpmyadmin-tools-extension",
-    "version": "0.1.2",
+    "version": "0.2.0",
     "private": true,
     "license": "MIT",
     "description": "Chrome and Firefox extension with quality-of-life improvements for phpMyAdmin",
