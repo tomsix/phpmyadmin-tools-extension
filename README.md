@@ -46,9 +46,18 @@ The default ⌘K / Alt+K leaves Ctrl+K alone, because phpMyAdmin uses it to togg
 
 ## Install
 
-Download the zip for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases): `phpmyadmin-tools-chrome-<version>.zip` or `phpmyadmin-tools-firefox-<version>.zip`.
+Download the file for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases): `phpmyadmin-tools-chrome-<version>.crx` or `.zip` for Chrome, Edge and Brave, `phpmyadmin-tools-firefox-<version>.zip` for Firefox.
 
-### Chrome, Edge and Brave
+### Chrome, Edge and Brave: the `.crx` package
+
+Chrome installs a `.crx` from outside the Chrome Web Store only when the computer's management policy allows it (`ExtensionInstallAllowlist` or `ExtensionInstallSources` in `chrome://policy`). The extension's id is `kegkjhpaehaglhpcdpnoanbconelpndb`, and it stays the same in every release.
+
+1. Open `chrome://extensions` and turn on **Developer mode** in the top-right corner.
+2. Drag `phpmyadmin-tools-chrome-<version>.crx` onto the page and confirm **Add extension**.
+
+If Chrome refuses the file, or adds it but keeps it switched off, the policy doesn't allow it: use the zip below instead. **Updating:** drag the newer `.crx` onto the page the same way; your settings are kept.
+
+### Chrome, Edge and Brave: the zip
 
 1. Unzip `phpmyadmin-tools-chrome-<version>.zip` into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't unzip it into Downloads and delete it afterwards.
 2. Open `chrome://extensions` (`edge://extensions` in Edge, `brave://extensions` in Brave).
@@ -74,7 +83,9 @@ For a permanent install, use the add-on from addons.mozilla.org. On Firefox Deve
 npm run build
 ```
 
-This writes `dist/chrome/` and `dist/firefox/`, plus a zip of each, named after the version in `package.json`. Load `dist/chrome` or `dist/firefox/manifest.json` as above. The two builds differ only in the Firefox `browser_specific_settings` block, and nothing is needed beyond Node and `zip`.
+This writes `dist/chrome/` and `dist/firefox/`, plus a zip of each, named after the version in `package.json`. Load `dist/chrome` or `dist/firefox/manifest.json` as above. The two builds differ only in their manifest: how the background script is declared, and Firefox's `browser_specific_settings` block. Nothing is needed beyond Node and `zip`.
+
+When the signing key is present, the build also packs `dist/phpmyadmin-tools-chrome-<version>.crx` with Chrome itself. The key is read from `~/.config/phpmyadmin-tools/chrome-extension.pem`, or from the path in `PMA_TOOLS_CRX_KEY`; set `CHROME_BINARY` when Chrome isn't in `/Applications`. Without the key the step is skipped. The key determines the extension's id, so every release must be packed with the same one: keep a backup of it, and never commit it.
 
 ## How it detects phpMyAdmin
 
