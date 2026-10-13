@@ -1,3 +1,5 @@
+<img src="assets/logo.png" alt="" width="96" align="right">
+
 # phpMyAdmin Tools
 
 A Chrome and Firefox extension that adds quality-of-life features to phpMyAdmin 5.1 and later, including 6.0.
