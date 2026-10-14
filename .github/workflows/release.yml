@@ -16,6 +16,7 @@ on:
 permissions:
     contents: write
     pull-requests: read
+    checks: read
 
 concurrency:
     group: release
@@ -43,6 +44,20 @@ jobs:
               with:
                   node-version: 24
                   cache: npm
+
+            # main can break after two pull requests that each passed are merged, so the commit itself must have passed.
+            - name: Require a passing Test run on this commit
+              run: |
+                  sha=$(git rev-parse HEAD)
+                  run=$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs" \
+                      -f check_name='Syntax, build and lint' \
+                      --jq '[.check_runs[] | select(.app.slug == "github-actions")] | sort_by(.started_at) | last | "\(.status) \(.conclusion)"')
+                  case "$run" in
+                      'completed success') echo "Test passed on $sha" ;;
+                      ''|'null null') echo "::error::Test has not run on $sha; run the Test workflow on main first"; exit 1 ;;
+                      completed*) echo "::error::Test did not pass on $sha (${run#completed }); fix main first"; exit 1 ;;
+                      *) echo "::error::Test is still running on $sha; start the release again when it has passed"; exit 1 ;;
+                  esac
 
             - name: Check the version
               id: previous

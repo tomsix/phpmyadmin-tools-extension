@@ -16,7 +16,7 @@ One file per workflow in `.github/workflows/`, each with `workflow_dispatch` so 
 
 - `test.yml` — every pull request and push to `main`: syntax check, build, lint. Its job name `Syntax, build and lint` is the required status check on `main`.
 - `build.yml` — every push to `main`: uploads the unsigned zips as a 30-day artifact. It never signs: every signed version needs its own number.
-- `release.yml` — by hand only, from `main` (the job refuses other refs, so a branch's copy of the workflow can't reach the secrets). Input: `version`, `prerelease`. Order: check the version is new and higher → collect the pull requests merged since the last tag as `## Updates` notes (none → stop) → build and lint with `RELEASE_VERSION` → draft release with the zips on the built commit → sign → upload the `.xpi` as an artifact → attach it and publish.
+- `release.yml` — by hand only, from `main` (the job refuses other refs, so a branch's copy of the workflow can't reach the secrets). Input: `version`, `prerelease`. Order: require a passing `Syntax, build and lint` check run on the `main` commit being released (missing, running or failed → stop) → check the version is new and higher → collect the pull requests merged since the last tag as `## Updates` notes (none → stop) → build and lint with `RELEASE_VERSION` → draft release with the zips on the built commit → sign → upload the `.xpi` as an artifact → attach it and publish.
 
 Keep signing after everything that can fail on GitHub's side and before nothing but the upload: a failure after signing burns the version number at Mozilla. A re-run replaces a leftover draft of the same version.
 
