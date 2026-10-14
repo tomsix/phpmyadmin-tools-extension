@@ -6,6 +6,11 @@
     "description": "Chrome and Firefox extension with quality-of-life improvements for phpMyAdmin",
     "type": "module",
     "scripts": {
-        "build": "node scripts/build.mjs"
+        "build": "node scripts/build.mjs",
+        "lint": "web-ext lint --source-dir dist/firefox",
+        "sign:firefox": "node scripts/sign-firefox.mjs"
+    },
+    "devDependencies": {
+        "web-ext": "10.7.0"
     }
 }
