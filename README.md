@@ -46,18 +46,21 @@ The default ⌘K / Alt+K leaves Ctrl+K alone, because phpMyAdmin uses it to togg
 
 ## Install
 
-Download the file for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases): `phpmyadmin-tools-chrome-<version>.crx` or `.zip` for Chrome, Edge and Brave, `phpmyadmin-tools-firefox-<version>.zip` for Firefox.
+Download the file for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases): `phpmyadmin-tools-firefox-<version>.xpi` for Firefox, `phpmyadmin-tools-chrome-<version>.zip` for Chrome, Edge and Brave.
 
-### Chrome, Edge and Brave: the `.crx` package
+### Firefox
 
-Chrome installs a `.crx` from outside the Chrome Web Store only when the computer's management policy allows it (`ExtensionInstallAllowlist` or `ExtensionInstallSources` in `chrome://policy`). The extension's id is `kegkjhpaehaglhpcdpnoanbconelpndb`, and it stays the same in every release.
+The `.xpi` is signed by Mozilla, so Firefox installs it permanently:
 
-1. Open `chrome://extensions` and turn on **Developer mode** in the top-right corner.
-2. Drag `phpmyadmin-tools-chrome-<version>.crx` onto the page and confirm **Add extension**.
+1. Open the downloaded `phpmyadmin-tools-firefox-<version>.xpi` in Firefox: drag it onto a Firefox window, or choose **Install Add-on From File…** under the gear icon in `about:addons`.
+2. Confirm **Add**.
+3. Open a phpMyAdmin page and press ⌘K / Alt+K. A phpMyAdmin tab that was already open needs a reload first.
 
-If Chrome refuses the file, or adds it but keeps it switched off, the policy doesn't allow it: use the zip below instead. **Updating:** drag the newer `.crx` onto the page the same way; your settings are kept.
+Firefox updates the add-on from addons.mozilla.org once a newer version is listed there.
 
-### Chrome, Edge and Brave: the zip
+### Chrome, Edge and Brave
+
+Chrome only installs extensions from outside the Chrome Web Store as an unpacked folder:
 
 1. Unzip `phpmyadmin-tools-chrome-<version>.zip` into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't unzip it into Downloads and delete it afterwards.
 2. Open `chrome://extensions` (`edge://extensions` in Edge, `brave://extensions` in Brave).
@@ -67,25 +70,26 @@ If Chrome refuses the file, or adds it but keeps it switched off, the policy doe
 
 **Updating:** replace the folder's contents with the new release, then click the reload icon on the extension's card in `chrome://extensions`.
 
-### Firefox
-
-Release builds of Firefox only keep signed add-ons, so a manual install lasts until Firefox restarts:
-
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Choose **Load Temporary Add-on…** and select `phpmyadmin-tools-firefox-<version>.zip`. There is no need to unzip it.
-3. Open a phpMyAdmin page and press ⌘K / Alt+K.
-
-For a permanent install, use the add-on from addons.mozilla.org. On Firefox Developer Edition or Nightly you can instead set `xpinstall.signatures.required` to `false` in `about:config`, rename the zip to `.xpi` and install it through **Install Add-on From File…** in `about:addons`.
-
 ### From source
 
 ```bash
+npm install
 npm run build
+npm run lint
 ```
 
-This writes `dist/chrome/` and `dist/firefox/`, plus a zip of each, named after the version in `package.json`. Load `dist/chrome` or `dist/firefox/manifest.json` as above. The two builds differ only in their manifest: how the background script is declared, and Firefox's `browser_specific_settings` block. Nothing is needed beyond Node and `zip`.
+`npm run build` writes `dist/chrome/` and `dist/firefox/`, plus a zip of each, named after the version in `package.json`. Load `dist/chrome` as above, or `dist/firefox/manifest.json` through **Load Temporary Add-on…** in `about:debugging#/runtime/this-firefox` (removed again when Firefox restarts). The two builds differ only in their manifest: how the background script is declared, and Firefox's `browser_specific_settings` block. `npm run lint` checks the Firefox build with Mozilla's own linter.
 
-When the signing key is present, the build also packs `dist/phpmyadmin-tools-chrome-<version>.crx` with Chrome itself. The key is read from `~/.config/phpmyadmin-tools/chrome-extension.pem`, or from the path in `PMA_TOOLS_CRX_KEY`; set `CHROME_BINARY` when Chrome isn't in `/Applications`. Without the key the step is skipped. The key determines the extension's id, so every release must be packed with the same one: keep a backup of it, and never commit it.
+### Signing the Firefox build
+
+```bash
+read -rs WEB_EXT_API_KEY && read -rs WEB_EXT_API_SECRET && export WEB_EXT_API_KEY WEB_EXT_API_SECRET
+npm run sign:firefox
+```
+
+The first line asks for the key and then the secret without showing them or saving them in your shell history.
+
+This signs `dist/firefox` as a self-distributed (unlisted) version of the add-on on addons.mozilla.org and writes `dist/phpmyadmin-tools-firefox-<version>.xpi`. The credentials are the JWT issuer and secret from **Manage API Keys** in the addons.mozilla.org Developer Hub. Keep them out of the repository. A version number can be used only once per add-on, listed and unlisted together, so a signed `.xpi` needs a version that was never submitted for the listing.
 
 ## How it detects phpMyAdmin
 
