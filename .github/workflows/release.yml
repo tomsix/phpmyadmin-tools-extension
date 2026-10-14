@@ -24,10 +24,15 @@ concurrency:
 jobs:
     release:
         name: Release ${{ inputs.version }}
+        # The workflow file that runs is the one on the chosen branch; only main's may touch the signing secrets.
+        if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
+        timeout-minutes: 30
         env:
             GH_TOKEN: ${{ github.token }}
             VERSION: ${{ inputs.version }}
+            # Read by the build and signing scripts instead of the version in package.json.
+            RELEASE_VERSION: ${{ inputs.version }}
         steps:
             - uses: actions/checkout@v7
               with:
@@ -42,10 +47,18 @@ jobs:
             - name: Check the version
               id: previous
               run: |
-                  if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                  # Browsers accept no leading zeros and no part above 65535 in a manifest version.
+                  if ! [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
                       echo "::error::$VERSION is not a version like 1.2.3"
                       exit 1
                   fi
+                  IFS=. read -r major minor patch <<< "$VERSION"
+                  for part in "$major" "$minor" "$patch"; do
+                      if [ "$part" -gt 65535 ]; then
+                          echo "::error::$VERSION has a part above 65535"
+                          exit 1
+                      fi
+                  done
                   if git rev-parse --quiet --verify "refs/tags/$VERSION" > /dev/null; then
                       echo "::error::Tag $VERSION already exists"
                       exit 1
@@ -83,21 +96,30 @@ jobs:
                   } > "$RUNNER_TEMP/notes.md"
                   cat "$RUNNER_TEMP/notes.md"
 
-            - name: Set the version
-              run: |
-                  npm version "$VERSION" --no-git-tag-version
-                  node -e '
-                      const { readFileSync, writeFileSync } = require("node:fs");
-                      const manifest = JSON.parse(readFileSync("src/manifest.json", "utf8"));
-                      manifest.version = process.env.VERSION;
-                      writeFileSync("src/manifest.json", `${JSON.stringify(manifest, null, 4)}\n`);
-                  '
-
             - run: npm ci
 
             - run: npm run build
 
             - run: npm run lint
+
+            # Signing comes after the draft: a version number can be signed only once, so little can still fail after it.
+            - name: Create a draft release
+              run: |
+                  SHA=$(git rev-parse HEAD)
+                  echo "SHA=$SHA" >> "$GITHUB_ENV"
+                  # Drafts have no tag yet, so look them up through the API instead of by tag.
+                  gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+                      --jq '.[] | select(.draft and .tag_name == env.VERSION) | .id' \
+                      | while read -r id; do
+                          gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+                      done
+                  gh release create "$VERSION" \
+                      "dist/phpmyadmin-tools-chrome-$VERSION.zip" \
+                      "dist/phpmyadmin-tools-firefox-$VERSION.zip" \
+                      --draft \
+                      --target "$SHA" \
+                      --title "$VERSION" \
+                      --notes-file "$RUNNER_TEMP/notes.md"
 
             - name: Sign the Firefox build
               env:
@@ -105,28 +127,16 @@ jobs:
                   WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
               run: npm run sign:firefox
 
-            - name: Commit the version
-              run: |
-                  git config user.name 'github-actions[bot]'
-                  git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-                  git add package.json package-lock.json src/manifest.json
-                  git commit -m "Bumped the version to $VERSION" -m "Released with the pull requests merged since the last release."
-                  git push origin HEAD:main
-                  echo "SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+            # Kept with the run, so the signed file survives when publishing fails.
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: phpmyadmin-tools-firefox-${{ inputs.version }}-signed
+                  path: dist/phpmyadmin-tools-firefox-${{ inputs.version }}.xpi
+                  if-no-files-found: error
 
-            - name: Create the release
+            - name: Publish the release
               env:
                   PRERELEASE: ${{ inputs.prerelease }}
               run: |
-                  flags=()
-                  if [ "$PRERELEASE" = 'true' ]; then
-                      flags+=(--prerelease)
-                  fi
-                  gh release create "$VERSION" \
-                      "dist/phpmyadmin-tools-firefox-$VERSION.xpi" \
-                      "dist/phpmyadmin-tools-chrome-$VERSION.zip" \
-                      "dist/phpmyadmin-tools-firefox-$VERSION.zip" \
-                      --target "$SHA" \
-                      --title "$VERSION" \
-                      --notes-file "$RUNNER_TEMP/notes.md" \
-                      "${flags[@]}"
+                  gh release upload "$VERSION" "dist/phpmyadmin-tools-firefox-$VERSION.xpi"
+                  gh release edit "$VERSION" --draft=false --prerelease="$PRERELEASE"
