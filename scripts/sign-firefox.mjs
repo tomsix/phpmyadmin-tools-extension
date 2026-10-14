@@ -7,9 +7,14 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const dist = join(root, 'dist');
 const source = join(dist, 'firefox');
 const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const envFile = join(root, '.env');
 
+// Variables already set in the shell win over the .env file.
+if (existsSync(envFile)) {
+    process.loadEnvFile(envFile);
+}
 if (!process.env.WEB_EXT_API_KEY || !process.env.WEB_EXT_API_SECRET) {
-    console.error('Set WEB_EXT_API_KEY and WEB_EXT_API_SECRET to your addons.mozilla.org API credentials first.');
+    console.error('Put WEB_EXT_API_KEY and WEB_EXT_API_SECRET in .env (see .env.example), or set them in the shell.');
     process.exit(1);
 }
 if (!existsSync(join(source, 'manifest.json'))) {

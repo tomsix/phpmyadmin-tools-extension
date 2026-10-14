@@ -82,12 +82,20 @@ npm run lint
 
 ### Signing the Firefox build
 
+Put your addons.mozilla.org credentials in a `.env` file in the project root (copy `.env.example`). Git ignores `.env`, so the values never reach the repository:
+
+```
+WEB_EXT_API_KEY=user:12345:67
+WEB_EXT_API_SECRET=…
+```
+
+Then run:
+
 ```bash
-read -rs WEB_EXT_API_KEY && read -rs WEB_EXT_API_SECRET && export WEB_EXT_API_KEY WEB_EXT_API_SECRET
 npm run sign:firefox
 ```
 
-The first line asks for the key and then the secret without showing them or saving them in your shell history.
+Variables already set in your shell take precedence over `.env`.
 
 This signs `dist/firefox` as a self-distributed (unlisted) version of the add-on on addons.mozilla.org and writes `dist/phpmyadmin-tools-firefox-<version>.xpi`. The credentials are the JWT issuer and secret from **Manage API Keys** in the addons.mozilla.org Developer Hub. Keep them out of the repository. A version number can be used only once per add-on, listed and unlisted together, so a signed `.xpi` needs a version that was never submitted for the listing.
 
