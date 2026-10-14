@@ -99,6 +99,16 @@ Variables already set in your shell take precedence over `.env`.
 
 This signs `dist/firefox` as a self-distributed (unlisted) version of the add-on on addons.mozilla.org and writes `dist/phpmyadmin-tools-firefox-<version>.xpi`. The credentials are the JWT issuer and secret from **Manage API Keys** in the addons.mozilla.org Developer Hub. Keep them out of the repository. A version number can be used only once per add-on, listed and unlisted together, so a signed `.xpi` needs a version that was never submitted for the listing.
 
+## Workflows
+
+Each GitHub Actions workflow has its own file in `.github/workflows/`, and each can also be started by hand under **Actions → (workflow) → Run workflow**.
+
+- **Test** (`test.yml`) runs on every pull request and every push to `main`: it checks the JavaScript syntax, builds both browsers and lints the Firefox build.
+- **Build** (`build.yml`) runs after every merge into `main` and attaches the Chrome and Firefox zips to the run as an artifact, kept for 30 days. They are unsigned, because every signed Firefox version needs its own version number.
+- **Release** (`release.yml`) only runs by hand. Give it a version (`0.3.0`) and choose whether it is a pre-release. It checks that the version is new and higher than the last release, collects the pull requests merged into `main` since then as the release notes (and stops when there are none), sets the version, builds, lints, signs the Firefox build, pushes the version commit to `main` and publishes the GitHub release with the signed `.xpi` and both zips.
+
+The release needs the addons.mozilla.org credentials as repository secrets `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` (**Settings → Secrets and variables → Actions**). With them in your local `.env`, `gh secret set --env-file .env` copies both. When `main` is a protected branch, allow GitHub Actions to push to it, or the version commit fails.
+
 ## How it detects phpMyAdmin
 
 The content script runs on every page, because phpMyAdmin lives on arbitrary hosts. It stops immediately unless the page has both `#pma_navigation` and the inline `CommonParams.setAll({…})` script, so nothing is added to other sites.
