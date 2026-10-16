@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const source = join(root, 'src');
 const dist = join(root, 'dist');
-const { version } = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+// The release workflow passes the version in, so main never has to carry a version commit.
+const version = process.env.RELEASE_VERSION || JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version;
 const manifest = { ...JSON.parse(readFileSync(join(source, 'manifest.json'), 'utf8')), version };
 
 const targets = {

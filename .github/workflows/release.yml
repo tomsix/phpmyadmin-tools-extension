@@ -1,0 +1,157 @@
+name: Release
+
+on:
+    workflow_dispatch:
+        inputs:
+            version:
+                description: Version to release, without a v (for example 0.3.0)
+                required: true
+                type: string
+            prerelease:
+                description: Mark the release as a pre-release
+                required: false
+                type: boolean
+                default: false
+
+permissions:
+    contents: write
+    pull-requests: read
+    checks: read
+
+concurrency:
+    group: release
+    cancel-in-progress: false
+
+jobs:
+    release:
+        name: Release ${{ inputs.version }}
+        # The workflow file that runs is the one on the chosen branch; only main's may touch the signing secrets.
+        if: github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        timeout-minutes: 30
+        env:
+            GH_TOKEN: ${{ github.token }}
+            VERSION: ${{ inputs.version }}
+            # Read by the build and signing scripts instead of the version in package.json.
+            RELEASE_VERSION: ${{ inputs.version }}
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  ref: main
+                  fetch-depth: 0
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: 24
+                  cache: npm
+
+            # main can break after two pull requests that each passed are merged, so the commit itself must have passed.
+            - name: Require a passing Test run on this commit
+              run: |
+                  sha=$(git rev-parse HEAD)
+                  run=$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$sha/check-runs" \
+                      -f check_name='Syntax, build and lint' \
+                      --jq '[.check_runs[] | select(.app.slug == "github-actions")] | sort_by(.started_at) | last | "\(.status) \(.conclusion)"')
+                  case "$run" in
+                      'completed success') echo "Test passed on $sha" ;;
+                      ''|'null null') echo "::error::Test has not run on $sha; run the Test workflow on main first"; exit 1 ;;
+                      completed*) echo "::error::Test did not pass on $sha (${run#completed }); fix main first"; exit 1 ;;
+                      *) echo "::error::Test is still running on $sha; start the release again when it has passed"; exit 1 ;;
+                  esac
+
+            - name: Check the version
+              id: previous
+              run: |
+                  # Browsers accept no leading zeros and no part above 65535 in a manifest version.
+                  if ! [[ "$VERSION" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+                      echo "::error::$VERSION is not a version like 1.2.3"
+                      exit 1
+                  fi
+                  IFS=. read -r major minor patch <<< "$VERSION"
+                  for part in "$major" "$minor" "$patch"; do
+                      if [ "$part" -gt 65535 ]; then
+                          echo "::error::$VERSION has a part above 65535"
+                          exit 1
+                      fi
+                  done
+                  if git rev-parse --quiet --verify "refs/tags/$VERSION" > /dev/null; then
+                      echo "::error::Tag $VERSION already exists"
+                      exit 1
+                  fi
+                  previous=$(git tag --list '[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)
+                  if [ -n "$previous" ] && [ "$(printf '%s\n%s\n' "$previous" "$VERSION" | sort -V | tail -n 1)" != "$VERSION" ]; then
+                      echo "::error::$VERSION is not higher than the last release $previous"
+                      exit 1
+                  fi
+                  echo "tag=$previous" >> "$GITHUB_OUTPUT"
+
+            - name: Collect the pull requests merged since the last release
+              env:
+                  PREVIOUS: ${{ steps.previous.outputs.tag }}
+              run: |
+                  # In UTC, like GitHub's mergedAt, so the two compare correctly as text.
+                  since=$(TZ=UTC git log -1 --date=format-local:%Y-%m-%dT%H:%M:%SZ --format=%cd "$PREVIOUS" 2> /dev/null || echo 1970-01-01T00:00:00Z)
+                  gh pr list --repo "$GITHUB_REPOSITORY" --state merged --base main --limit 500 \
+                      --json title,url,mergedAt \
+                      --jq "[.[] | select(.mergedAt > \"$since\")] | sort_by(.mergedAt) | .[] | \"- [\(.title)](\(.url))\"" \
+                      > "$RUNNER_TEMP/pull-requests.md"
+                  if [ ! -s "$RUNNER_TEMP/pull-requests.md" ]; then
+                      echo "::error::No pull requests were merged into main since ${PREVIOUS:-the first commit}, so there is nothing to release"
+                      exit 1
+                  fi
+                  {
+                      echo '## Updates'
+                      cat "$RUNNER_TEMP/pull-requests.md"
+                      echo
+                      if [ -n "$PREVIOUS" ]; then
+                          echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$PREVIOUS...$VERSION"
+                      else
+                          echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/commits/$VERSION"
+                      fi
+                  } > "$RUNNER_TEMP/notes.md"
+                  cat "$RUNNER_TEMP/notes.md"
+
+            - run: npm ci
+
+            - run: npm run build
+
+            - run: npm run lint
+
+            # Signing comes after the draft: a version number can be signed only once, so little can still fail after it.
+            - name: Create a draft release
+              run: |
+                  SHA=$(git rev-parse HEAD)
+                  echo "SHA=$SHA" >> "$GITHUB_ENV"
+                  # Drafts have no tag yet, so look them up through the API instead of by tag.
+                  gh api "repos/$GITHUB_REPOSITORY/releases" --paginate \
+                      --jq '.[] | select(.draft and .tag_name == env.VERSION) | .id' \
+                      | while read -r id; do
+                          gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/$id"
+                      done
+                  gh release create "$VERSION" \
+                      "dist/phpmyadmin-tools-chrome-$VERSION.zip" \
+                      "dist/phpmyadmin-tools-firefox-$VERSION.zip" \
+                      --draft \
+                      --target "$SHA" \
+                      --title "$VERSION" \
+                      --notes-file "$RUNNER_TEMP/notes.md"
+
+            - name: Sign the Firefox build
+              env:
+                  WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+                  WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+              run: npm run sign:firefox
+
+            # Kept with the run, so the signed file survives when publishing fails.
+            - uses: actions/upload-artifact@v7
+              with:
+                  name: phpmyadmin-tools-firefox-${{ inputs.version }}-signed
+                  path: dist/phpmyadmin-tools-firefox-${{ inputs.version }}.xpi
+                  if-no-files-found: error
+
+            - name: Publish the release
+              env:
+                  PRERELEASE: ${{ inputs.prerelease }}
+              run: |
+                  gh release upload "$VERSION" "dist/phpmyadmin-tools-firefox-$VERSION.xpi"
+                  gh release edit "$VERSION" --draft=false --prerelease="$PRERELEASE"

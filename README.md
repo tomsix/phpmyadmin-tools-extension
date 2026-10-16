@@ -2,106 +2,119 @@
 
 # phpMyAdmin Tools
 
-A Chrome and Firefox extension that adds quality-of-life features to phpMyAdmin 5.1 and later, including 6.0.
+A browser extension for Chrome and Firefox that lets you move around phpMyAdmin with the keyboard:
 
-## Quick jump
+- Jump to any database or table by typing part of its name.
+- Jump straight to a tab such as Structure or SQL, or to a column's search field.
+- Switch to the next or previous tab with a shortcut.
+- Search text columns with "contains" (`LIKE %...%`) by default.
 
-Press **⌘K** (macOS) or **Alt+K** (Windows/Linux) — or [your own shortcut](#changing-the-shortcuts) — on any phpMyAdmin page to open a palette that fuzzy-searches every database and table on the server.
-
-| Key | Action |
-| --- | --- |
-| `↵` | Browse the table (or open the database's structure) |
-| `⌥↵` / `Alt↵` | Open the table's structure |
-| `⌘↵` / `Ctrl↵` | Open in a new tab |
-| `↑` `↓` | Move the selection |
-| `⇥` | Complete the search to the selected item (`db.table`, or `db.` for a database); press it again to list that item's tabs |
-| `esc` | Close |
-
-Type `shop.ord` to narrow to tables matching `ord` in databases matching `shop`. Add a `/` to list a database's or table's tabs: `shop/` shows the tabs of the `shop` database, `shop.orders/` those of its `orders` table, and `shop.orders/str` narrows them to Structure. A `/` on its own lists the tabs of the page you are on: the current table's, the current database's, or the server's on the home page. Pressing Tab twice on a result gets you there: once to complete the name, once to add the `/`. On a table's Search tab, a second `/` lists its columns: `shop.orders/Search/mail` opens the Search tab with the cursor in the `email` column's field, and `//mail` does the same for the table you are on. Tab names follow your phpMyAdmin language (`Zoeken`, `Rechercher`), but any part of the name works. With an empty query the palette lists the current database's tables, then every database.
-
-The index is built through phpMyAdmin's own `/databases` and `/tables` AJAX routes, using the session and token of the open page. It is cached per tab for 5 minutes. Click the counter next to the search field to rebuild it. System schemas are listed as databases, but their tables are not indexed.
-
-## Tab cycling
-
-Press **⌥←** / **⌥→** (macOS) or **Alt+Shift+←** / **Alt+Shift+→** (Windows/Linux) by default, to move to the previous or next tab of the current table, database or server (Browse, Structure, SQL, …), wrapping around at either end. Tabs collapsed into phpMyAdmin's *More* menu are included. The shortcuts are ignored while typing in a field or the SQL editor — but not in a field the page focused on its own, like the SQL tab's editor, until you click or type in it. To jump to one specific tab, type `/` in the palette instead.
-
-## Changing the shortcuts
-
-The shortcuts to open the palette and to go to the previous or next tab can be changed on the extension's options page:
-
-- **Chrome, Edge, Brave:** right-click the extension's icon and choose **Options**, or open **Details → Extension options** in `chrome://extensions`.
-- **Firefox:** open `about:addons`, choose phpMyAdmin Tools and go to the **Options** tab.
-
-Each action can have several key combinations. Click **Add** and press the combination; **×** removes one, and **Reset to defaults** restores the ones above. A combination that is already used by another action is refused. Shortcuts are matched by key position, like the defaults, and one without Ctrl, Alt or ⌘ is ignored while you type in a field. The settings are saved with your browser profile's sync storage, and open phpMyAdmin tabs pick up a change immediately. The keys inside the palette (Enter, Tab, the arrows and Esc) are fixed.
-
-## Search operator
-
-phpMyAdmin's Search tab always starts a text column on `LIKE`, which only finds exact matches unless you type the `%` yourself, and phpMyAdmin has no setting to change that. The extension switches text columns to `LIKE %...%` (contains) when the Search tab opens. Choose `LIKE` under **Search** on the options page to keep phpMyAdmin's default. A column you already set yourself, and number or date columns, are left alone.
-
-## Appearance
-
-The quick jump palette and the options page follow the system or browser's light or dark setting. To always use one of the two, choose **Light** or **Dark** under **Appearance** on the options page; open phpMyAdmin tabs switch immediately. phpMyAdmin's own pages keep their theme.
-
-The default ⌘K / Alt+K leaves Ctrl+K alone, because phpMyAdmin uses it to toggle the SQL console.
+It works with phpMyAdmin 5.1 and later, including 6.0. It is not affiliated with the phpMyAdmin project.
 
 ## Install
 
-Download the file for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases): `phpmyadmin-tools-firefox-<version>.xpi` for Firefox, `phpmyadmin-tools-chrome-<version>.zip` for Chrome, Edge and Brave.
+Download the file for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases).
 
-### Firefox
+### Firefox (140 or later)
 
-The `.xpi` is signed by Mozilla, so Firefox installs it permanently:
+1. Download `phpmyadmin-tools-firefox-<version>.xpi`.
+2. Drag it onto a Firefox window, or open `about:addons`, click the gear icon and choose **Install Add-on From File…**.
+3. Click **Add**.
 
-1. Open the downloaded `phpmyadmin-tools-firefox-<version>.xpi` in Firefox: drag it onto a Firefox window, or choose **Install Add-on From File…** under the gear icon in `about:addons`.
-2. Confirm **Add**.
-3. Open a phpMyAdmin page and press ⌘K / Alt+K. A phpMyAdmin tab that was already open needs a reload first.
-
-Firefox updates the add-on from addons.mozilla.org once a newer version is listed there.
+The file is signed by Mozilla, so the add-on stays installed. Firefox keeps it up to date once a newer version is published on addons.mozilla.org.
 
 ### Chrome, Edge and Brave
 
-Chrome only installs extensions from outside the Chrome Web Store as an unpacked folder:
+Chrome only accepts extensions from outside the Chrome Web Store as a folder:
 
-1. Unzip `phpmyadmin-tools-chrome-<version>.zip` into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't unzip it into Downloads and delete it afterwards.
+1. Download `phpmyadmin-tools-chrome-<version>.zip` and unzip it into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't leave it in Downloads.
 2. Open `chrome://extensions` (`edge://extensions` in Edge, `brave://extensions` in Brave).
 3. Turn on **Developer mode** in the top-right corner.
-4. Choose **Load unpacked** and select the folder from step 1, the one that holds `manifest.json`.
-5. Open a phpMyAdmin page and press ⌘K / Alt+K. A phpMyAdmin tab that was already open needs a reload first.
+4. Click **Load unpacked** and choose the folder from step 1.
 
-**Updating:** replace the folder's contents with the new release, then click the reload icon on the extension's card in `chrome://extensions`.
+**Updating:** replace the folder's contents with the new version, then click the reload icon on the extension's card in `chrome://extensions`.
 
-### From source
+### Check that it works
 
-```bash
-npm install
-npm run build
-npm run lint
-```
+Open phpMyAdmin (reload the page if it was already open). A small phpMyAdmin Tools button appears at the top right of phpMyAdmin's top bar. Press **⌘K** on a Mac or **Alt+K** on Windows and Linux: a search box opens in the middle of the page.
 
-`npm run build` writes `dist/chrome/` and `dist/firefox/`, plus a zip of each, named after the version in `package.json`. Load `dist/chrome` as above, or `dist/firefox/manifest.json` through **Load Temporary Add-on…** in `about:debugging#/runtime/this-firefox` (removed again when Firefox restarts). The two builds differ only in their manifest: how the background script is declared, and Firefox's `browser_specific_settings` block. `npm run lint` checks the Firefox build with Mozilla's own linter.
+## Jump to a database or table
 
-### Signing the Firefox build
+Press **⌘K** / **Alt+K** and type part of a name. The letters don't have to be next to each other: `wacc` finds `WebshopAccounts`. Without typing anything, you see the tables of the database you're in.
 
-Put your addons.mozilla.org credentials in a `.env` file in the project root (copy `.env.example`). Git ignores `.env`, so the values never reach the repository:
+To narrow the search to one database, put a dot between the two names: `shop.ord` finds tables matching `ord` in databases matching `shop`.
 
-```
-WEB_EXT_API_KEY=user:12345:67
-WEB_EXT_API_SECRET=…
-```
+| Key | What it does |
+| --- | --- |
+| `↑` `↓` | Choose a result |
+| `↵` Enter | Open the table's data (or the database's structure) |
+| `⌥↵` / `Alt+↵` | Open the table's structure |
+| `⌘↵` / `Ctrl+↵` | Open it in a new browser tab |
+| `⇥` Tab key | Fill in the chosen name, so you can keep typing after it |
+| `Esc` | Close |
 
-Then run:
+The list of databases and tables is loaded when you first open the search and kept for 5 minutes. Click the number next to the search box to reload it, for example after creating a table. MySQL's own system databases are listed, but their tables are not.
 
-```bash
-npm run sign:firefox
-```
+## Jump to a tab
 
-Variables already set in your shell take precedence over `.env`.
+Type a `/` after a database or table name to see its phpMyAdmin tabs, and keep typing to pick one:
 
-This signs `dist/firefox` as a self-distributed (unlisted) version of the add-on on addons.mozilla.org and writes `dist/phpmyadmin-tools-firefox-<version>.xpi`. The credentials are the JWT issuer and secret from **Manage API Keys** in the addons.mozilla.org Developer Hub. Keep them out of the repository. A version number can be used only once per add-on, listed and unlisted together, so a signed `.xpi` needs a version that was never submitted for the listing.
+| You type | You get |
+| --- | --- |
+| `shop/` | the tabs of the `shop` database |
+| `shop.orders/` | the tabs of the `orders` table |
+| `shop.orders/str` | the `orders` table's Structure tab |
+| `/` | the tabs of the page you're on |
+| `/sql` | the SQL tab of the page you're on |
 
-## How it detects phpMyAdmin
+Tab names are shown in your phpMyAdmin language (`Structuur`, `Structure`, `Struktur`); typing part of the name is enough.
 
-The content script runs on every page, because phpMyAdmin lives on arbitrary hosts. It stops immediately unless the page has both `#pma_navigation` and the inline `CommonParams.setAll({…})` script, so nothing is added to other sites.
+Shortcut: press the Tab key twice on a result. The first press fills in the name, the second adds the `/`.
+
+## Jump to a column
+
+On a table's Search tab, a second `/` lists the table's columns. Choose one, and the Search tab opens with the cursor in that column's search field, ready to type:
+
+| You type | You get |
+| --- | --- |
+| `shop.orders/Search/` | every column of the `orders` table |
+| `shop.orders/Search/mail` | the `email` column |
+| `//mail` | the `email` column of the table you're on |
+
+## Switch tabs
+
+Press **⌥←** / **⌥→** on a Mac, or **Alt+Shift+←** / **Alt+Shift+→** on Windows and Linux, to go to the previous or next tab (Browse, Structure, SQL, …). After the last tab you're back at the first.
+
+The shortcuts don't work while you're typing in a field or in the SQL editor, so they never get in the way of your text. Click outside the field first.
+
+## Search with "contains"
+
+phpMyAdmin's Search tab starts every text column on `LIKE`, which only finds exact matches unless you type `%` yourself. With this extension, text columns start on `LIKE %...%` instead, so typing `mail` finds every value that contains "mail". Number and date columns, and columns you changed yourself, are left alone.
+
+Prefer phpMyAdmin's own behaviour? Choose `LIKE` under **Search** in the settings.
+
+## Settings
+
+Open the settings with the phpMyAdmin Tools button in phpMyAdmin's top bar, or:
+
+- **Chrome, Edge, Brave:** right-click the extension's icon in the toolbar and choose **Options**.
+- **Firefox:** open `about:addons`, choose phpMyAdmin Tools and go to **Options**.
+
+You can change:
+
+- **Keyboard shortcuts** for opening the search and switching tabs. Click **Add** and press the keys you want; **×** removes a shortcut and **Reset shortcuts to defaults** brings back the original ones. You can give an action more than one shortcut. A shortcut without Ctrl, Alt or ⌘ only works when you're not typing in a field. The keys inside the search box (Enter, the Tab key, the arrows and Esc) can't be changed. Ctrl+K is left to phpMyAdmin, which opens its SQL console with it.
+- **Appearance:** light or dark, or follow your computer's setting. This applies to the search box and the settings page; phpMyAdmin itself keeps its own look.
+- **Search:** the starting operator for text columns, `LIKE %...%` (contains) or `LIKE`.
+
+Changes apply straight away in phpMyAdmin pages that are already open, and they follow you to other computers where you're signed in to the same browser account.
+
+## Privacy
+
+The extension collects nothing and sends nothing to anyone. It only talks to the phpMyAdmin you are logged into. It runs on every website because phpMyAdmin can be installed at any address, but it does nothing on pages that aren't phpMyAdmin.
+
+## Development
+
+Building, signing, releasing and the code's design are described in [`CLAUDE.md`](CLAUDE.md) and the files it links in [`.claude/`](.claude/).
 
 ## License
 
