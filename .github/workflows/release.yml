@@ -25,14 +25,14 @@ concurrency:
 jobs:
     release:
         name: Release ${{ inputs.version }}
-        # The workflow file that runs is the one on the chosen branch; only main's may touch the signing secrets.
+        # The workflow file that runs is the one on the chosen branch; only main's may touch the addons.mozilla.org secrets.
         if: github.ref == 'refs/heads/main'
         runs-on: ubuntu-latest
         timeout-minutes: 30
         env:
             GH_TOKEN: ${{ github.token }}
             VERSION: ${{ inputs.version }}
-            # Read by the build and signing scripts instead of the version in package.json.
+            # Read by the build script instead of the version in package.json.
             RELEASE_VERSION: ${{ inputs.version }}
         steps:
             - uses: actions/checkout@v7
@@ -103,6 +103,8 @@ jobs:
                       echo '## Updates'
                       cat "$RUNNER_TEMP/pull-requests.md"
                       echo
+                      echo 'Firefox: install or update from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/phpmyadmin-tools/) once Mozilla has reviewed this version. Chrome, Edge and Brave: load the zip below unpacked.'
+                      echo
                       if [ -n "$PREVIOUS" ]; then
                           echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$PREVIOUS...$VERSION"
                       else
@@ -117,7 +119,6 @@ jobs:
 
             - run: npm run lint
 
-            # Signing comes after the draft: a version number can be signed only once, so little can still fail after it.
             - name: Create a draft release
               run: |
                   SHA=$(git rev-parse HEAD)
@@ -130,28 +131,21 @@ jobs:
                       done
                   gh release create "$VERSION" \
                       "dist/phpmyadmin-tools-chrome-$VERSION.zip" \
-                      "dist/phpmyadmin-tools-firefox-$VERSION.zip" \
                       --draft \
                       --target "$SHA" \
                       --title "$VERSION" \
                       --notes-file "$RUNNER_TEMP/notes.md"
 
-            - name: Sign the Firefox build
+            # Every listed version reaches all Firefox users, so a pre-release stays on GitHub.
+            # Submitted last: a version number can be used only once at Mozilla.
+            - name: Submit the Firefox build to addons.mozilla.org
+              if: ${{ !inputs.prerelease }}
               env:
                   WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
                   WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
-              run: npm run sign:firefox
-
-            # Kept with the run, so the signed file survives when publishing fails.
-            - uses: actions/upload-artifact@v7
-              with:
-                  name: phpmyadmin-tools-firefox-${{ inputs.version }}-signed
-                  path: dist/phpmyadmin-tools-firefox-${{ inputs.version }}.xpi
-                  if-no-files-found: error
+              run: npm run submit:firefox
 
             - name: Publish the release
               env:
                   PRERELEASE: ${{ inputs.prerelease }}
-              run: |
-                  gh release upload "$VERSION" "dist/phpmyadmin-tools-firefox-$VERSION.xpi"
-                  gh release edit "$VERSION" --draft=false --prerelease="$PRERELEASE"
+              run: gh release edit "$VERSION" --draft=false --prerelease="$PRERELEASE"
