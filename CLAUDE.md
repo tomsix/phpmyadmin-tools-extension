@@ -11,7 +11,7 @@ phpMyAdmin Tools is a Manifest V3 browser extension for Chrome and Firefox that 
 npm install            # web-ext, pinned as a dev dependency
 npm run build          # dist/chrome, dist/firefox and a zip of each
 npm run lint           # Mozilla's linter on dist/firefox
-npm run sign:firefox   # sign dist/firefox as an unlisted .xpi (needs .env)
+npm run submit:firefox # submit dist/firefox to addons.mozilla.org (needs .env)
 ```
 
 Check the syntax after every edit: `for file in src/*.js scripts/*.mjs; do node --check "$file"; done`.
