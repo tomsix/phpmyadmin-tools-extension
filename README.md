@@ -13,21 +13,21 @@ It works with phpMyAdmin 5.1 and later, including 6.0. It is not affiliated with
 
 ## Install
 
-Download the file for your browser from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases).
-
 ### Firefox (140 or later)
 
-1. Download `phpmyadmin-tools-firefox-<version>.xpi`.
-2. Drag it onto a Firefox window, or open `about:addons`, click the gear icon and choose **Install Add-on From File…**.
-3. Click **Add**.
+Install phpMyAdmin Tools from its page on addons.mozilla.org:
 
-The file is signed by Mozilla, so the add-on stays installed. Firefox keeps it up to date once a newer version is published on addons.mozilla.org.
+**[addons.mozilla.org/firefox/addon/phpmyadmin-tools](https://addons.mozilla.org/firefox/addon/phpmyadmin-tools/)**
+
+Click **Add to Firefox** and confirm. Firefox keeps the add-on up to date by itself.
+
+Installed an earlier version from a `.xpi` file on GitHub? Remove it in `about:addons` and install it again from addons.mozilla.org, so you keep getting updates. Settings you changed may have to be set again.
 
 ### Chrome, Edge and Brave
 
-Chrome only accepts extensions from outside the Chrome Web Store as a folder:
+The extension isn't in the Chrome Web Store, and Chrome only accepts extensions from elsewhere as a folder:
 
-1. Download `phpmyadmin-tools-chrome-<version>.zip` and unzip it into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't leave it in Downloads.
+1. Download `phpmyadmin-tools-chrome-<version>.zip` from the newest release on the [releases page](https://github.com/tomsix/phpmyadmin-tools-extension/releases) and unzip it into a folder you keep, such as `~/Extensions/phpmyadmin-tools`. The browser loads the extension from that folder every time it starts, so don't leave it in Downloads.
 2. Open `chrome://extensions` (`edge://extensions` in Edge, `brave://extensions` in Brave).
 3. Turn on **Developer mode** in the top-right corner.
 4. Click **Load unpacked** and choose the folder from step 1.
