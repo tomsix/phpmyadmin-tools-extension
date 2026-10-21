@@ -21,7 +21,7 @@ Install phpMyAdmin Tools from its page on addons.mozilla.org:
 
 Click **Add to Firefox** and confirm. Firefox keeps the add-on up to date by itself.
 
-Installed an earlier version from a `.xpi` file on GitHub? Remove it in `about:addons` and install it again from addons.mozilla.org, so you keep getting updates. Settings you changed may have to be set again.
+Installed an earlier version from a `.xpi` file on GitHub? Remove it in `about:addons` and install it again from addons.mozilla.org, so you keep getting updates.
 
 ### Chrome, Edge and Brave
 
@@ -114,7 +114,7 @@ The extension collects nothing and sends nothing to anyone. It only talks to the
 
 ## Development
 
-Building, signing, releasing and the code's design are described in [`CLAUDE.md`](CLAUDE.md) and the files it links in [`.claude/`](.claude/).
+Building, releasing, submitting to addons.mozilla.org and the code's design are described in [`CLAUDE.md`](CLAUDE.md) and the files it links in [`.claude/`](.claude/).
 
 ## License
 

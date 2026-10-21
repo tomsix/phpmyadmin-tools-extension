@@ -4,7 +4,7 @@
 
 Tags and versions are bare semver (`0.3.0`). The released version comes from the release, not from a commit: `scripts/build.mjs` reads `RELEASE_VERSION`, falls back to `package.json` for local builds, and `scripts/submit-firefox.mjs` submits whatever version the build wrote. Never bump `package.json` or `src/manifest.json` in a pull request just to release.
 
-A Firefox version number can be used only once per add-on, listed and unlisted together. Never submit a number that addons.mozilla.org has already seen: 0.2.0 to 0.2.4 are taken there, although GitHub only has tags up to 0.2.1, so the next release is 0.2.5 or higher.
+A Firefox version number can be used only once per add-on, listed and unlisted together. Never submit a number that addons.mozilla.org has already seen. Keep a GitHub release for every version on addons.mozilla.org, so the workflow's "higher than the last tag" check also protects Mozilla's numbers: 0.2.2 and 0.2.3 were used there without a GitHub release, and 0.2.4 is both the first public version and the latest tag.
 
 ## Distribution
 
