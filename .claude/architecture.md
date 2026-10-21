@@ -38,6 +38,7 @@ Identify a tab by its url's `route` parameter (`/table/search`), never by its la
 - Don't use the browser `commands` API: those shortcuts are global and would take ⌘K and ⌥← from every website. Leave Ctrl+K alone: phpMyAdmin toggles its SQL console with it.
 - `isTyping()` ignores shortcuts while the user types in a field, but not in a field the page focused on its own (the SQL tab's editor): `isFocusUserDriven` only turns true after a click or a key press.
 - The palette's host stops key events from reaching phpMyAdmin's single-key shortcuts on `document`.
+- A binding with `double: true` is a double tap of the modifier in its `code` (`Shift`, `Control`, `Alt`, `Meta`): pressed and released alone twice within 400 ms, nothing in between. `createDoubleTapDetector()` in `shortcuts.js` recognises it for both the content script and the options page; in `content.js` its listeners are registered before the other key listeners, which stop the events they handle. A double tap types nothing, so it also works while typing; switching tabs still waits until the user isn't typing.
 - The keys inside the palette (Enter, Tab, arrows, Esc) are fixed.
 
 ## Settings
