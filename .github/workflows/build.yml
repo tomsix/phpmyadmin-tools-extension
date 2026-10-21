@@ -24,7 +24,7 @@ jobs:
 
             - run: npm run build
 
-            # Unsigned on purpose: every signed Firefox version needs its own version number, so signing is left to the release.
+            # Only for testing: Firefox installs come from addons.mozilla.org, which the release workflow submits to.
             - uses: actions/upload-artifact@v7
               with:
                   name: phpmyadmin-tools-${{ github.sha }}

@@ -8,7 +8,7 @@
     "scripts": {
         "build": "node scripts/build.mjs",
         "lint": "web-ext lint --source-dir dist/firefox",
-        "sign:firefox": "node scripts/sign-firefox.mjs"
+        "submit:firefox": "node scripts/submit-firefox.mjs"
     },
     "devDependencies": {
         "web-ext": "10.8.0"
