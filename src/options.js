@@ -36,6 +36,14 @@
         addBinding(recordingFor, recorded);
     }, true);
 
+    const doubleTap = PMA_TOOLS_SHORTCUTS.createDoubleTapDetector((key) => {
+        if (recordingFor !== null) {
+            addBinding(recordingFor, { code: key, double: true, alt: false, ctrl: false, meta: false, shift: false });
+        }
+    });
+    window.addEventListener('keydown', (event) => doubleTap.keydown(event), true);
+    window.addEventListener('keyup', (event) => doubleTap.keyup(event), true);
+
     render();
 
     async function addBinding(actionId, recorded) {

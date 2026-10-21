@@ -36,11 +36,11 @@ The extension isn't in the Chrome Web Store, and Chrome only accepts extensions 
 
 ### Check that it works
 
-Open phpMyAdmin (reload the page if it was already open). A small phpMyAdmin Tools button appears at the top right of phpMyAdmin's top bar. Press **⌘K** on a Mac or **Alt+K** on Windows and Linux: a search box opens in the middle of the page.
+Open phpMyAdmin (reload the page if it was already open). A small phpMyAdmin Tools button appears at the top right of phpMyAdmin's top bar. Press **⌘K** on a Mac or **Alt+K** on Windows and Linux, or tap **Shift** twice: a search box opens in the middle of the page.
 
 ## Jump to a database or table
 
-Press **⌘K** / **Alt+K** and type part of a name. The letters don't have to be next to each other: `wacc` finds `WebshopAccounts`. Without typing anything, you see the tables of the database you're in.
+Press **⌘K** / **Alt+K** or tap **Shift** twice, like Search Everywhere in PhpStorm, and type part of a name. The letters don't have to be next to each other: `wacc` finds `WebshopAccounts`. Without typing anything, you see the tables of the database you're in.
 
 To narrow the search to one database, put a dot between the two names: `shop.ord` finds tables matching `ord` in databases matching `shop`.
 
@@ -102,7 +102,7 @@ Open the settings with the phpMyAdmin Tools button in phpMyAdmin's top bar, or:
 
 You can change:
 
-- **Keyboard shortcuts** for opening the search and switching tabs. Click **Add** and press the keys you want; **×** removes a shortcut and **Reset shortcuts to defaults** brings back the original ones. You can give an action more than one shortcut. A shortcut without Ctrl, Alt or ⌘ only works when you're not typing in a field. The keys inside the search box (Enter, the Tab key, the arrows and Esc) can't be changed. Ctrl+K is left to phpMyAdmin, which opens its SQL console with it.
+- **Keyboard shortcuts** for opening the search and switching tabs. Click **Add** and press the keys you want, or tap Shift, Ctrl, Alt or ⌘ twice for a double tap; **×** removes a shortcut and **Reset shortcuts to defaults** brings back the original ones. You can give an action more than one shortcut. A shortcut without Ctrl, Alt or ⌘ only works when you're not typing in a field; a double tap works everywhere, because it types nothing. The keys inside the search box (Enter, the Tab key, the arrows and Esc) can't be changed. Ctrl+K is left to phpMyAdmin, which opens its SQL console with it.
 - **Appearance:** light or dark, or follow your computer's setting. This applies to the search box and the settings page; phpMyAdmin itself keeps its own look.
 - **Search:** the starting operator for text columns, `LIKE %...%` (contains) or `LIKE`.
 

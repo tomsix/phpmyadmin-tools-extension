@@ -68,6 +68,22 @@
         isFocusUserDriven = Date.now() - lastUserGestureAt < 1000;
     }, true);
 
+    // Registered before the other key listeners, which stop the events they handle.
+    const doubleTap = PMA_TOOLS_SHORTCUTS.createDoubleTapDetector((key, event) => {
+        const isDoubleTap = (item) => item.double && item.code === key;
+        if (shortcuts.openPalette.some(isDoubleTap)) {
+            togglePalette();
+            return;
+        }
+        // Switching tabs leaves the page, so it waits until the user isn't typing, as the key shortcuts do.
+        const direction = shortcuts.previousTab.some(isDoubleTap) ? -1 : shortcuts.nextTab.some(isDoubleTap) ? 1 : null;
+        if (direction !== null && palette === null && !isTyping(event)) {
+            goToTab(direction);
+        }
+    });
+    window.addEventListener('keydown', (event) => doubleTap.keydown(event), true);
+    window.addEventListener('keyup', (event) => doubleTap.keyup(event), true);
+
     window.addEventListener('keydown', (event) => {
         const shortcut = shortcuts.openPalette.find((item) => PMA_TOOLS_SHORTCUTS.matches(item, event));
         // A shortcut without Ctrl, Alt or Cmd would otherwise fire while typing, in a field or in the palette.
@@ -77,11 +93,7 @@
         }
         event.preventDefault();
         event.stopImmediatePropagation();
-        if (palette === null) {
-            openPalette();
-        } else {
-            closePalette();
-        }
+        togglePalette();
     }, true);
 
     window.addEventListener('keydown', (event) => {
@@ -96,18 +108,32 @@
         if (event.repeat || palette !== null || isTyping(event)) {
             return;
         }
+        if (goToTab(direction)) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+        }
+    }, true);
+
+    function togglePalette() {
+        if (palette === null) {
+            openPalette();
+        } else {
+            closePalette();
+        }
+    }
+
+    function goToTab(direction) {
         const tabs = [...document.querySelectorAll(TAB_LINK_SELECTOR)];
         if (tabs.length < 2) {
-            return;
+            return false;
         }
-        event.preventDefault();
-        event.stopImmediatePropagation();
         const active = tabs.findIndex((tab) => tab.parentElement.classList.contains('active'));
         const next = active === -1
             ? (direction === 1 ? 0 : tabs.length - 1)
             : (active + direction + tabs.length) % tabs.length;
         location.assign(tabs[next].href);
-    }, true);
+        return true;
+    }
 
     function addIndicator() {
         const icons = document.getElementById('page_nav_icons');
