@@ -5,6 +5,9 @@ var PMA_TOOLS_SHORTCUTS = (() => {
     const isMac = /Mac|iPhone|iPad/.test(navigator.userAgentData?.platform ?? navigator.platform);
     const STORAGE_KEY = 'shortcuts';
     const MODIFIER_KEYS = ['Alt', 'AltGraph', 'CapsLock', 'Control', 'Meta', 'Shift', 'Fn'];
+    // A double tap is one of these keys pressed and released twice, alone, within DOUBLE_TAP_MS.
+    const DOUBLE_TAP_KEYS = ['Shift', 'Control', 'Alt', 'Meta'];
+    const DOUBLE_TAP_MS = 400;
 
     const ACTIONS = [
         { id: 'openPalette', label: 'Open the quick jump palette' },
@@ -16,7 +19,7 @@ var PMA_TOOLS_SHORTCUTS = (() => {
 
     // Alt+←/→ is browser back/forward on Windows and Linux, hence the extra Shift there.
     const DEFAULTS = {
-        openPalette: [isMac ? binding('KeyK', { meta: true }) : binding('KeyK', { alt: true })],
+        openPalette: [isMac ? binding('KeyK', { meta: true }) : binding('KeyK', { alt: true }), binding('Shift', { double: true })],
         previousTab: [binding('ArrowLeft', { alt: true, shift: !isMac })],
         nextTab: [binding('ArrowRight', { alt: true, shift: !isMac })],
     };
@@ -47,7 +50,8 @@ var PMA_TOOLS_SHORTCUTS = (() => {
     }
 
     function matches(shortcut, event) {
-        return shortcut.code === event.code
+        return !shortcut.double
+            && shortcut.code === event.code
             && shortcut.alt === event.altKey
             && shortcut.ctrl === event.ctrlKey
             && shortcut.meta === event.metaKey
@@ -55,14 +59,61 @@ var PMA_TOOLS_SHORTCUTS = (() => {
     }
 
     function isSame(a, b) {
-        return a.code === b.code && a.alt === b.alt && a.ctrl === b.ctrl && a.meta === b.meta && a.shift === b.shift;
+        return Boolean(a.double) === Boolean(b.double) && a.code === b.code && a.alt === b.alt && a.ctrl === b.ctrl && a.meta === b.meta && a.shift === b.shift;
     }
 
+    // A double tap types nothing, so it counts as safe to use while typing.
     function hasModifier(shortcut) {
-        return shortcut.alt || shortcut.ctrl || shortcut.meta;
+        return Boolean(shortcut.double) || shortcut.alt || shortcut.ctrl || shortcut.meta;
+    }
+
+    function createDoubleTapDetector(onDoubleTap) {
+        let held = null;
+        let pressedAt = 0;
+        let lastTap = null;
+        return {
+            keydown(event) {
+                if (event.repeat) {
+                    return;
+                }
+                const activeModifiers = [event.shiftKey, event.ctrlKey, event.altKey, event.metaKey].filter(Boolean).length;
+                if (DOUBLE_TAP_KEYS.includes(event.key) && activeModifiers === 1) {
+                    held = event.key;
+                    pressedAt = Date.now();
+                } else {
+                    // Any other key, or a second modifier, breaks the sequence: Shift + a letter is typing a capital.
+                    held = null;
+                    lastTap = null;
+                }
+            },
+            keyup(event) {
+                if (event.key !== held) {
+                    return;
+                }
+                held = null;
+                const now = Date.now();
+                // Holding the key down is not a tap.
+                if (now - pressedAt > DOUBLE_TAP_MS) {
+                    lastTap = null;
+                    return;
+                }
+                if (lastTap !== null && lastTap.key === event.key && now - lastTap.at <= DOUBLE_TAP_MS) {
+                    lastTap = null;
+                    onDoubleTap(event.key, event);
+                } else {
+                    lastTap = { key: event.key, at: now };
+                }
+            },
+        };
     }
 
     function format(shortcut, layoutMap = null) {
+        if (shortcut.double) {
+            const names = isMac
+                ? { Shift: '⇧', Control: '⌃', Alt: '⌥', Meta: '⌘' }
+                : { Shift: 'Shift', Control: 'Ctrl', Alt: 'Alt', Meta: 'Meta' };
+            return `Double ${names[shortcut.code] ?? shortcut.code}`;
+        }
         const key = shortcut.key
             ?? layoutMap?.get(shortcut.code)?.toUpperCase()
             ?? CODE_LABELS[shortcut.code]
@@ -109,5 +160,20 @@ var PMA_TOOLS_SHORTCUTS = (() => {
         });
     }
 
-    return { ACTIONS, DEFAULTS, isMac, fromEvent, matches, isSame, hasModifier, format, normalize, load, save, reset, onChange };
+    return {
+        ACTIONS,
+        DEFAULTS,
+        isMac,
+        fromEvent,
+        matches,
+        isSame,
+        hasModifier,
+        createDoubleTapDetector,
+        format,
+        normalize,
+        load,
+        save,
+        reset,
+        onChange,
+    };
 })();
