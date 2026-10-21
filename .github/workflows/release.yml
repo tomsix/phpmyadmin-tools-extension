@@ -87,6 +87,7 @@ jobs:
 
             - name: Collect the pull requests merged since the last release
               env:
+                  PRERELEASE: ${{ inputs.prerelease }}
                   PREVIOUS: ${{ steps.previous.outputs.tag }}
               run: |
                   # In UTC, like GitHub's mergedAt, so the two compare correctly as text.
@@ -103,7 +104,11 @@ jobs:
                       echo '## Updates'
                       cat "$RUNNER_TEMP/pull-requests.md"
                       echo
-                      echo 'Firefox: install or update from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/phpmyadmin-tools/) once Mozilla has reviewed this version. Chrome, Edge and Brave: load the zip below unpacked.'
+                      if [ "$PRERELEASE" = 'true' ]; then
+                          echo 'This pre-release is not on addons.mozilla.org. Chrome, Edge and Brave: load the zip below unpacked.'
+                      else
+                          echo 'Firefox: install or update from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/phpmyadmin-tools/) once Mozilla has reviewed this version. Chrome, Edge and Brave: load the zip below unpacked.'
+                      fi
                       echo
                       if [ -n "$PREVIOUS" ]; then
                           echo "**Full Changelog**: https://github.com/$GITHUB_REPOSITORY/compare/$PREVIOUS...$VERSION"
