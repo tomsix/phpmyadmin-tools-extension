@@ -185,11 +185,13 @@
             return;
         }
         const operator = await PMA_TOOLS_PREFERENCES.load('searchOperator');
+        const likeColumnTypes = new Set(await PMA_TOOLS_PREFERENCES.load('likeColumnTypes'));
         const columnInputs = [...document.querySelectorAll('input[name^="criteriaColumnNames["]')];
         columnInputs.forEach((input, i) => {
             const select = document.querySelector(`select[name="criteriaColumnOperators[${i}]"]`);
-            // Only replace phpMyAdmin's own default, and only on a column that offers the operator (text columns).
-            if (select !== null && select.selectedIndex === 0 && select.value !== operator
+            const type = document.querySelector(`input[name="criteriaColumnTypes[${i}]"]`)?.value ?? '';
+            // Only replace phpMyAdmin's own default, and only on the configured column types: number columns offer LIKE too.
+            if (select !== null && likeColumnTypes.has(PMA_TOOLS_PREFERENCES.baseColumnType(type)) && select.selectedIndex === 0 && select.value !== operator
                 && [...select.options].some((option) => option.value === operator)) {
                 select.value = operator;
                 select.dispatchEvent(new Event('change', { bubbles: true }));

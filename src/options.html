@@ -177,6 +177,37 @@
             cursor: pointer;
         }
 
+        .type-list {
+            padding: 14px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .type-list p {
+            margin-bottom: 10px;
+        }
+
+        .type-list form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .type-list input[type="text"] {
+            width: 12em;
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: inherit;
+            font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .type-list input[type="text"]:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
         .footer {
             display: flex;
             flex-wrap: wrap;
@@ -236,6 +267,18 @@
             <label><input type="radio" name="search-operator" value="LIKE"> <code>LIKE</code> — phpMyAdmin's default</label>
         </fieldset>
         <span class="status" id="search-status" role="status"></span>
+
+        <div class="type-list">
+            <p>Column types that start on <code>LIKE %...%</code>. Every other column keeps phpMyAdmin's default. A type matches without its length: <code>varchar</code> covers <code>varchar(255)</code>.</p>
+            <div class="bindings" id="like-column-types"></div>
+            <form id="add-like-column-type">
+                <label class="visually-hidden" for="like-column-type">Column type</label>
+                <input type="text" id="like-column-type" placeholder="enum" autocomplete="off" spellcheck="false">
+                <button type="submit">Add</button>
+                <button type="button" id="reset-like-column-types">Reset types to defaults</button>
+            </form>
+            <span class="status" id="like-column-types-status" role="status"></span>
+        </div>
     </section>
 
     <script src="shortcuts.js"></script>
