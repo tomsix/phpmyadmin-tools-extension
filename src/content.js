@@ -14,7 +14,9 @@
     const isMac = PMA_TOOLS_SHORTCUTS.isMac;
     let shortcuts = PMA_TOOLS_SHORTCUTS.DEFAULTS;
     let theme = 'system';
+    let snippets = [];
     const columnCache = new Map();
+    const primaryKeyCache = new Map();
     const baseUrl = new URL('index.php', location.href).href;
     const cacheKey = `pma-tools:index:${location.host}:${params.server}`;
     // Firefox runs content-script fetch() under the extension's origin; content.fetch() uses the page's.
@@ -54,6 +56,14 @@
         if (palette !== null) {
             PMA_TOOLS_PREFERENCES.applyTheme(palette.host, theme);
         }
+    });
+    PMA_TOOLS_SNIPPETS.load().then((loaded) => {
+        snippets = loaded;
+        render();
+    });
+    PMA_TOOLS_SNIPPETS.onChange((changed) => {
+        snippets = changed;
+        render();
     });
 
     prepareSearchPage();
@@ -466,7 +476,60 @@
         if (parts.length === 2) {
             return searchTabs(parts[0].trim(), parts[1].trim().toLowerCase());
         }
-        return { results: searchItems(rawQuery), message: null };
+        const query = rawQuery.trim().toLowerCase();
+        // Snippets only join the list once something is typed, so the empty palette still lists this database's tables.
+        const results = query === '' ? searchItems(rawQuery) : [...searchItems(rawQuery), ...searchSnippets(findTarget('').target, query)]
+            .sort((a, b) => b.score - a.score)
+            .slice(0, MAX_RESULTS);
+        return { results, message: null };
+    }
+
+    function searchSnippets(target, query) {
+        const results = [];
+        snippets.forEach((snippet, position) => {
+            const needs = PMA_TOOLS_SNIPPETS.needs(snippet);
+            if ((needs.db && target.db === '') || (needs.table && target.table === '')) {
+                return;
+            }
+            const label = PMA_TOOLS_SNIPPETS.label(snippet);
+            const match = score(label, query);
+            if (match === null) {
+                return;
+            }
+            if (needs.pk) {
+                // Fetched now, so choosing the snippet doesn't wait for it.
+                getPrimaryKey(target).catch(() => {});
+            }
+            results.push({ type: 'snippet', ...target, snippet, label, position, score: match.score, snippetPositions: match.positions });
+        });
+        return results.sort((a, b) => b.score - a.score || a.position - b.position);
+    }
+
+    function getPrimaryKey(target) {
+        const key = `${target.db}\u0000${target.table}`;
+        if (!primaryKeyCache.has(key)) {
+            const url = new URL(baseUrl);
+            url.search = new URLSearchParams({ route: '/table/structure', server: params.server, db: target.db, table: target.table, ajax_request: 'true' });
+            const request = pageFetch(url.href, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((response) => response.json())
+                .catch(() => {
+                    throw new Error('Couldn\'t load the primary key — has the session expired?');
+                })
+                .then((response) => {
+                    if (response.success !== true) {
+                        throw new Error(stripTags(response.error || response.message || 'Couldn\'t load the primary key'));
+                    }
+                    const page = new DOMParser().parseFromString(String(response.message ?? ''), 'text/html');
+                    // The Structure tab marks each primary key column with the b_primary icon, in every language and theme.
+                    return [...page.querySelectorAll('input[name="selected_fld[]"]')]
+                        .filter((input) => page.querySelector(`label[for="${CSS.escape(input.id)}"] .ic_b_primary`) !== null)
+                        .map((input) => input.value);
+                });
+            // A failed request is tried again the next time.
+            request.catch(() => primaryKeyCache.delete(key));
+            primaryKeyCache.set(key, request);
+        }
+        return primaryKeyCache.get(key);
     }
 
     function searchColumns(targetQuery, tabQuery, columnQuery) {
@@ -571,7 +634,10 @@
             }
         });
         results.sort((a, b) => b.score - a.score || a.position - b.position);
-        return { results, message: results.length === 0 ? 'No matching tabs' : null };
+        // Sorting is stable, so on an equal score the tabs stay ahead of the snippets.
+        results.push(...searchSnippets(target, tabQuery));
+        results.sort((a, b) => b.score - a.score);
+        return { results, message: results.length === 0 ? `No matching tabs${snippets.length === 0 ? '' : ' or snippets'}` : null };
     }
 
     function resolveTarget(targetQuery) {
@@ -714,13 +780,110 @@
         return url.href;
     }
 
-    function go(result, { structure = false, newTab = false } = {}) {
-        const url = urlFor(result, structure);
+    // The alternate action (Alt+Enter) opens a table's structure, or runs a snippet instead of filling the SQL tab.
+    function go(result, { alternate = false, newTab = false } = {}) {
+        if (result.type === 'snippet') {
+            openSnippet(result, { run: alternate, newTab });
+            return;
+        }
+        const url = urlFor(result, alternate);
         closePalette();
         if (newTab) {
             window.open(url, '_blank', 'noopener');
         } else {
             location.href = url;
+        }
+    }
+
+    async function openSnippet(result, { run, newTab }) {
+        const opened = palette;
+        const needsPk = PMA_TOOLS_SNIPPETS.needs(result.snippet).pk;
+        // A new tab opened after waiting for the primary key no longer counts as the user's click, and is blocked as a
+        // popup. So the tab is opened now, empty, and the form is sent into it once the query is ready.
+        const tabName = newTab && needsPk ? `pma-tools-${Date.now()}` : null;
+        const tab = tabName === null ? null : window.open('about:blank', tabName);
+        const fail = (message) => {
+            tab?.close();
+            showNotice(message);
+        };
+        let pk = [];
+        if (needsPk) {
+            try {
+                pk = await getPrimaryKey(result);
+            } catch (error) {
+                fail(error.message);
+                return;
+            }
+            if (pk.length === 0) {
+                fail(`${getTargetText(result)} has no primary key`);
+                return;
+            }
+        }
+        if (palette !== opened) {
+            tab?.close();
+            return;
+        }
+        // Running skips the SQL tab where the user would see the query, so a name that could change it is refused.
+        if (run) {
+            const unsafe = getNamesToFill(result.snippet, { db: result.db, table: result.table, pk }).find((name) => !isPlainIdentifier(name));
+            if (unsafe !== undefined) {
+                fail(`Not run: the name "${unsafe}" could change the query. Press Enter to check it in the SQL tab first.`);
+                return;
+            }
+        }
+        const target = result.db === '' ? {} : result.table === '' ? { db: result.db } : { db: result.db, table: result.table };
+        // SQL tabs only take a query by POST: phpMyAdmin ignores an unsigned sql_query in the url.
+        const route = run ? '/sql' : result.table !== '' ? '/table/sql' : result.db !== '' ? '/database/sql' : '/server/sql';
+        const action = `${baseUrl}?${new URLSearchParams({ route, server: params.server, ...target })}`;
+        closePalette();
+        submitForm(action, {
+            server: params.server,
+            ...target,
+            token: getToken(),
+            sql_query: PMA_TOOLS_SNIPPETS.fill(result.snippet, { db: result.db, table: result.table, pk }),
+        }, tabName ?? (newTab ? '_blank' : null));
+    }
+
+    // Only the names the query actually contains: {table} alone never puts the database name in it.
+    function getNamesToFill(snippet, { db, table, pk }) {
+        const used = PMA_TOOLS_SNIPPETS.placeholders(snippet);
+        return [...(used.has('db') ? [db] : []), ...(used.has('table') ? [table] : []), ...(used.has('pk') ? pk : [])];
+    }
+
+    // Letters, digits, _, $ and single dashes (my-db): nothing that ends a quote, starts a comment or adds a statement.
+    function isPlainIdentifier(name) {
+        return /^[\p{L}\p{N}_$-]+$/u.test(name) && !name.includes('--');
+    }
+
+    // target is null for this tab, '_blank' for a new one, or the name of a tab opened earlier.
+    function submitForm(action, fields, target) {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = action;
+        form.hidden = true;
+        if (target !== null) {
+            form.target = target;
+        }
+        // noopener would make the browser look past a tab opened earlier by its name.
+        if (target === '_blank') {
+            form.rel = 'noopener';
+        }
+        for (const [name, value] of Object.entries(fields)) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = value;
+            form.append(input);
+        }
+        document.body.append(form);
+        form.submit();
+        form.remove();
+    }
+
+    function showNotice(message) {
+        if (palette !== null) {
+            palette.notice = message;
+            render();
         }
     }
 
@@ -741,15 +904,15 @@
             <div class="backdrop">
                 <div class="dialog" role="dialog" aria-modal="true" aria-label="Jump to database or table">
                     <div class="search">
-                        <input type="text" placeholder="Jump to table or database… (db.table to narrow, / for tabs)"
+                        <input type="text" placeholder="Jump to table, database or snippet… (db.table to narrow, / for tabs)"
                                role="combobox" aria-expanded="true" aria-controls="pma-tools-results"
                                aria-autocomplete="list" autocomplete="off" spellcheck="false">
                         <button type="button" class="status" hidden></button>
                     </div>
                     <ul class="results" id="pma-tools-results" role="listbox"></ul>
                     <div class="footer">
-                        <span><kbd>↵</kbd> browse</span>
-                        <span><kbd data-key="structure"></kbd> structure</span>
+                        <span><kbd>↵</kbd> <span data-hint="open">browse</span></span>
+                        <span><kbd data-key="structure"></kbd> <span data-hint="alternate">structure</span></span>
                         <span><kbd data-key="new-tab"></kbd> new tab</span>
                         <span><kbd>⇥</kbd> complete</span>
                         <span><kbd>/</kbd> tabs</span>
@@ -769,9 +932,11 @@
             host,
             input,
             list: root.querySelector('.results'),
+            footer: root.querySelector('.footer'),
             status,
             results: [],
             selected: 0,
+            notice: null,
             previousFocus: document.activeElement,
         };
 
@@ -788,6 +953,7 @@
         });
         input.addEventListener('input', () => {
             palette.selected = 0;
+            palette.notice = null;
             render();
         });
         input.addEventListener('keydown', onKeydown);
@@ -834,7 +1000,7 @@
             const result = palette.results[palette.selected];
             if (result !== undefined) {
                 go(result, {
-                    structure: event.altKey,
+                    alternate: event.altKey,
                     newTab: isMac ? event.metaKey : event.ctrlKey,
                 });
             }
@@ -843,6 +1009,10 @@
 
     function getCompletion(result, currentValue) {
         const prefix = result.current ? '' : getTargetText(result);
+        if (result.type === 'snippet') {
+            // A name has no slash, but a snippet without one goes by its query's first line, which can.
+            return `${prefix}/${result.label.replaceAll('/', '')}`;
+        }
         if (result.type === 'column') {
             return `${prefix}/${result.tabLabel}/${result.column}`;
         }
@@ -902,7 +1072,7 @@
 
             const badge = document.createElement('span');
             badge.className = 'badge';
-            badge.textContent = { db: 'db', table: 'tbl', tab: 'tab', column: 'col' }[result.type];
+            badge.textContent = { db: 'db', table: 'tbl', tab: 'tab', column: 'col', snippet: 'sql' }[result.type];
 
             const label = document.createElement('span');
             label.className = 'label';
@@ -911,6 +1081,12 @@
                 prefix.className = 'db';
                 prefix.textContent = `${getTargetText(result)} / ${result.tabLabel} / `;
                 label.append(prefix, highlight(result.column, result.columnPositions));
+            } else if (result.type === 'snippet') {
+                const target = document.createElement('span');
+                target.className = 'db';
+                target.textContent = `${getTargetText(result)} / `;
+                label.append(target, highlight(result.label, result.snippetPositions));
+                item.title = result.snippet.sql;
             } else if (result.type === 'tab') {
                 const target = document.createElement('span');
                 target.className = 'db';
@@ -941,14 +1117,20 @@
             });
             item.addEventListener('click', (event) => {
                 go(result, {
-                    structure: event.altKey,
+                    alternate: event.altKey,
                     newTab: isMac ? event.metaKey : event.ctrlKey,
                 });
             });
             return item;
         });
 
-        if (items.length === 0) {
+        if (palette.notice !== null) {
+            const notice = document.createElement('li');
+            notice.className = 'empty';
+            notice.setAttribute('role', 'alert');
+            notice.textContent = palette.notice;
+            items.unshift(notice);
+        } else if (items.length === 0) {
             const empty = document.createElement('li');
             empty.className = 'empty';
             empty.textContent = message ?? (index.error !== ''
@@ -974,6 +1156,9 @@
     }
 
     function renderSelection() {
+        const isSnippet = palette.results[palette.selected]?.type === 'snippet';
+        palette.footer.querySelector('[data-hint="open"]').textContent = isSnippet ? 'fill SQL tab' : 'browse';
+        palette.footer.querySelector('[data-hint="alternate"]').textContent = isSnippet ? 'run' : 'structure';
         const items = palette.list.querySelectorAll('.item');
         items.forEach((item, i) => item.setAttribute('aria-selected', String(i === palette.selected)));
         const selected = items[palette.selected];

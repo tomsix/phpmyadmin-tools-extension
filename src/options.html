@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>phpMyAdmin Tools settings</title>
+    <link rel="icon" href="icons/icon-32.png" sizes="32x32">
+    <link rel="icon" href="icons/icon-16.png" sizes="16x16">
     <style>
         :root {
             --bg: #ffffff;
@@ -64,6 +66,15 @@
             padding: 4px;
             border-radius: 10px;
             background: #ffffff;
+        }
+
+        .version {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .version code {
+            font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
         }
 
         h1 {
@@ -224,14 +235,227 @@
         .status.error {
             color: var(--danger);
         }
+
+        .status button {
+            margin-left: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 28px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tabs [role="tab"] {
+            margin-bottom: -1px;
+            padding: 8px 14px;
+            border: 0;
+            border-bottom: 2px solid transparent;
+            border-radius: 0;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .tabs [role="tab"]:hover {
+            color: var(--fg);
+        }
+
+        .tabs [role="tab"][aria-selected="true"] {
+            border-bottom-color: var(--accent);
+            color: var(--fg);
+        }
+
+        .placeholders {
+            display: grid;
+            grid-template-columns: max-content 1fr;
+            gap: 4px 12px;
+            margin: -8px 0 16px;
+            color: var(--muted);
+        }
+
+        .placeholders dd {
+            margin: 0;
+        }
+
+        .snippet {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 0;
+            border-top: 1px solid var(--border);
+        }
+
+        .snippet-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .snippet-name {
+            font-weight: 500;
+        }
+
+        .snippet-name.untitled {
+            color: var(--muted);
+            font-style: italic;
+        }
+
+        .snippet pre {
+            margin: 6px 0 0;
+            padding: 8px 10px;
+            overflow-x: auto;
+            border-radius: 6px;
+            background: var(--chip);
+            font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .snippet-actions {
+            display: flex;
+            flex: none;
+            gap: 6px;
+        }
+
+        .snippet.editing pre {
+            outline: 2px solid var(--accent);
+        }
+
+        .empty-list {
+            padding: 14px 0;
+            border-top: 1px solid var(--border);
+            color: var(--muted);
+        }
+
+        .snippet-form {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border);
+        }
+
+        h3 {
+            margin: 0 0 4px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .snippet-form label {
+            font-weight: 500;
+        }
+
+        .optional {
+            color: var(--muted);
+            font-weight: 400;
+        }
+
+        .snippet-form input,
+        .snippet-form textarea {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: transparent;
+            color: inherit;
+            font: inherit;
+        }
+
+        .snippet-form textarea {
+            min-height: 6em;
+            resize: vertical;
+            font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .snippet-form input + label,
+        .snippet-form textarea + .insert {
+            margin-top: 6px;
+        }
+
+        .snippet-form input:focus-visible,
+        .snippet-form textarea:focus-visible {
+            outline: 2px solid var(--accent);
+            outline-offset: 1px;
+        }
+
+        .insert {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            color: var(--muted);
+        }
+
+        .insert button {
+            font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
+        .snippet-form .footer {
+            margin-top: 10px;
+        }
+
+        button.primary {
+            border-color: var(--accent);
+            background: var(--accent);
+            color: var(--bg);
+        }
+
+        button.primary:hover {
+            border-color: var(--accent);
+            opacity: 0.9;
+        }
     </style>
 </head>
 <body>
     <header>
         <img src="icons/icon-128.png" alt="" width="48" height="48">
-        <h1>phpMyAdmin Tools settings</h1>
+        <div>
+            <h1>phpMyAdmin Tools</h1>
+            <div class="version" id="version"></div>
+        </div>
     </header>
 
+    <div class="tabs" role="tablist" aria-label="Settings pages">
+        <button type="button" role="tab" id="tab-snippets" aria-controls="panel-snippets" aria-selected="true">Snippets</button>
+        <button type="button" role="tab" id="tab-settings" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Settings</button>
+    </div>
+
+    <div role="tabpanel" id="panel-snippets" aria-labelledby="tab-snippets">
+    <section aria-labelledby="snippets-heading">
+        <h2 id="snippets-heading">SQL snippets</h2>
+        <p>Queries you use often. Type a snippet's name in the quick jump palette, or list them after a <code>/</code> next to a table's tabs, to open the SQL tab with the query filled in. Placeholders take the names of the page you're on, or of the database or table before the <code>/</code>:</p>
+        <dl class="placeholders">
+            <dt><code>{db}</code></dt><dd>the database</dd>
+            <dt><code>{table}</code></dt><dd>the table</dd>
+            <dt><code>{pk}</code></dt><dd>the table's primary key column, or its columns separated by commas</dd>
+        </dl>
+        <p>Names are filled in as they are. Write <code>`{table}`</code> with backticks when a name may contain a space or a dash.</p>
+
+        <div id="snippet-list"></div>
+
+        <form id="snippet-form" class="snippet-form">
+            <h3 id="snippet-form-heading">Add a snippet</h3>
+            <label for="snippet-name">Name <span class="optional">(optional; letters, digits, spaces, - and _)</span></label>
+            <input type="text" id="snippet-name" placeholder="Latest rows" autocomplete="off">
+            <label for="snippet-sql">Query</label>
+            <textarea id="snippet-sql" rows="5" spellcheck="false" placeholder="SELECT * FROM `{table}` ORDER BY {pk} DESC LIMIT 50"></textarea>
+            <div class="insert" id="snippet-placeholders">
+                <span>Insert</span>
+                <button type="button" data-placeholder="{db}">{db}</button>
+                <button type="button" data-placeholder="{table}">{table}</button>
+                <button type="button" data-placeholder="{pk}">{pk}</button>
+            </div>
+            <div class="footer">
+                <button type="submit" class="primary" id="snippet-submit">Add snippet</button>
+                <button type="button" id="snippet-cancel" hidden>Cancel</button>
+                <span class="status" id="snippets-status" role="status"></span>
+            </div>
+        </form>
+    </section>
+    </div>
+
+    <div role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden>
     <section aria-labelledby="shortcuts-heading">
         <h2 id="shortcuts-heading">Keyboard shortcuts</h2>
         <p>Click <strong>Add</strong>, then press the key combination, or tap Shift, Ctrl, Alt or ⌘ twice for a double tap. Keys are matched by their position on the keyboard, not by the character they type. A shortcut without Ctrl, Alt or ⌘ is ignored while you type in a field.</p>
@@ -280,9 +504,11 @@
             <span class="status" id="like-column-types-status" role="status"></span>
         </div>
     </section>
+    </div>
 
     <script src="shortcuts.js"></script>
     <script src="preferences.js"></script>
+    <script src="snippets.js"></script>
     <script src="options.js"></script>
 </body>
 </html>
