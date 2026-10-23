@@ -813,6 +813,14 @@
         if (palette !== opened) {
             return;
         }
+        // Running skips the SQL tab where the user would see the query, so a name that could change it is refused.
+        if (run) {
+            const unsafe = getNamesToFill(result.snippet, { db: result.db, table: result.table, pk }).find((name) => !isPlainIdentifier(name));
+            if (unsafe !== undefined) {
+                showNotice(`Not run: the name "${unsafe}" could change the query. Press Enter to check it in the SQL tab first.`);
+                return;
+            }
+        }
         const target = result.db === '' ? {} : result.table === '' ? { db: result.db } : { db: result.db, table: result.table };
         // SQL tabs only take a query by POST: phpMyAdmin ignores an unsigned sql_query in the url.
         const route = run ? '/sql' : result.table !== '' ? '/table/sql' : result.db !== '' ? '/database/sql' : '/server/sql';
@@ -824,6 +832,17 @@
             token: getToken(),
             sql_query: PMA_TOOLS_SNIPPETS.fill(result.snippet, { db: result.db, table: result.table, pk }),
         }, newTab);
+    }
+
+    // Only the names the query actually contains: {table} alone never puts the database name in it.
+    function getNamesToFill(snippet, { db, table, pk }) {
+        const used = PMA_TOOLS_SNIPPETS.placeholders(snippet);
+        return [...(used.has('db') ? [db] : []), ...(used.has('table') ? [table] : []), ...(used.has('pk') ? pk : [])];
+    }
+
+    // Letters, digits, _, $ and single dashes (my-db): nothing that ends a quote, starts a comment or adds a statement.
+    function isPlainIdentifier(name) {
+        return /^[\p{L}\p{N}_$-]+$/u.test(name) && !name.includes('--');
     }
 
     function submitForm(action, fields, newTab) {

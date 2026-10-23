@@ -105,7 +105,7 @@ Type part of a snippet's name in the search box to use it on the page you're on,
 | Key | What it does |
 | --- | --- |
 | `↵` Enter | Open the SQL tab with the query filled in, so you can check it and click **Go** |
-| `⌥↵` / `Alt+↵` | Run the query straight away |
+| `⌥↵` / `Alt+↵` | Run the query straight away, if every filled-in name is a plain name (letters, digits, `_`, `$`, `-`); otherwise use Enter to check the query first |
 | `⌘↵` / `Ctrl+↵` | Open the SQL tab in a new browser tab |
 
 A snippet only shows up where its placeholders can be filled in: one with `{table}` or `{pk}` needs a table, one with `{db}` a database. A snippet without a name is found by its first line. Snippets appear once you type something, so the empty search box still lists the tables of the database you're in; a `/` with nothing after it lists the page's tabs followed by the snippets that fit it.

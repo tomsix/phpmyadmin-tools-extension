@@ -70,5 +70,5 @@ var PMA_TOOLS_SNIPPETS = (() => {
         });
     }
 
-    return { normalize, createId, label, needs, fill, load, save, onChange };
+    return { normalize, createId, label, placeholders, needs, fill, load, save, onChange };
 })();

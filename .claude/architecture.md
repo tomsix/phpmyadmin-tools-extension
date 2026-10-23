@@ -49,7 +49,7 @@ A snippet is `{ id, name, sql }`, stored as one list under `snippets` in `storag
 
 `{db}`, `{table}` and `{pk}` are replaced by `fill()` with the names as they are; the snippet's author adds backticks. `needs()` says what a snippet requires: a snippet is only listed for a target that names its database and, for `{table}` or `{pk}`, its table. The primary key is fetched when the snippet is listed and cached per table in `primaryKeyCache`; a table without one gets a notice in the palette instead of a half-filled query.
 
-In the palette, snippets join the database and table results for the current page once something is typed, and follow the tabs after a `/` for that target. Enter fills the target's SQL tab, Alt+Enter (the alternate action that opens a table's structure elsewhere) runs the query, Cmd/Ctrl+Enter opens a new tab.
+In the palette, snippets join the database and table results for the current page once something is typed, and follow the tabs after a `/` for that target. Enter fills the target's SQL tab, Alt+Enter (the alternate action that opens a table's structure elsewhere) runs the query, Cmd/Ctrl+Enter opens a new tab. Running skips the SQL tab where the user would see the query, so `openSnippet()` only runs it when every name the query actually contains is a plain identifier (`isPlainIdentifier()`: letters, digits, `_`, `$`, single `-`); otherwise it refers the user to Enter. Never loosen that check: a table or column name is chosen by whoever created it.
 
 ## Settings
 
