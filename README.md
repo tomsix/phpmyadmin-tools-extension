@@ -89,9 +89,9 @@ The shortcuts don't work while you're typing in a field or in the SQL editor, so
 
 ## Search with "contains"
 
-phpMyAdmin's Search tab starts every text column on `LIKE`, which only finds exact matches unless you type `%` yourself. With this extension, text columns start on `LIKE %...%` instead, so typing `mail` finds every value that contains "mail". Number and date columns, and columns you changed yourself, are left alone.
+phpMyAdmin's Search tab starts every text column on `LIKE`, which only finds exact matches unless you type `%` yourself. With this extension, text columns start on `LIKE %...%` instead, so typing `mail` finds every value that contains "mail". By default only text columns change (`char`, `varchar` and the `text` types); number, date and other columns, and columns you changed yourself, are left alone.
 
-Prefer phpMyAdmin's own behaviour? Choose `LIKE` under **Search** in the settings.
+Which column types change is a list under **Search** in the settings: add a type such as `enum` or `json`, or remove one. Prefer phpMyAdmin's own behaviour everywhere? Choose `LIKE` there instead.
 
 ## Settings
 
@@ -104,7 +104,7 @@ You can change:
 
 - **Keyboard shortcuts** for opening the search and switching tabs. Click **Add** and press the keys you want, or tap Shift, Ctrl, Alt or ⌘ twice for a double tap; **×** removes a shortcut and **Reset shortcuts to defaults** brings back the original ones. You can give an action more than one shortcut. A shortcut without Ctrl, Alt or ⌘ only works when you're not typing in a field; a double tap works everywhere, because it types nothing. The keys inside the search box (Enter, the Tab key, the arrows and Esc) can't be changed. Ctrl+K is left to phpMyAdmin, which opens its SQL console with it.
 - **Appearance:** light or dark, or follow your computer's setting. This applies to the search box and the settings page; phpMyAdmin itself keeps its own look.
-- **Search:** the starting operator for text columns, `LIKE %...%` (contains) or `LIKE`.
+- **Search:** the starting operator for text columns, `LIKE %...%` (contains) or `LIKE`, and the list of column types it applies to. **Reset types to defaults** brings back the six text types.
 
 Changes apply straight away in phpMyAdmin pages that are already open, and they follow you to other computers where you're signed in to the same browser account.
 

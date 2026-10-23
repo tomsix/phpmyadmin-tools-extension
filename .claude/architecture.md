@@ -22,7 +22,7 @@ Only through phpMyAdmin's own routes, on the page's origin, with its session:
 
 - `POST index.php?route=/databases` → `databases` (an object in 5.2, so read it with `asList()`).
 - `POST index.php?route=/tables` with `db` → `tables`. With `db` and `table`, its `menu` is that table's tab bar; with `db` alone, the database's.
-- `GET` the table's Search tab url with `ajax_request=true` → `message` holds the search form. Column names are `input[name="criteriaColumnNames[i]"]`, the value fields `[name="criteriaValues[i]"]`, the operators `select[name="criteriaColumnOperators[i]"]`.
+- `GET` the table's Search tab url with `ajax_request=true` → `message` holds the search form. Column names are `input[name="criteriaColumnNames[i]"]`, the value fields `[name="criteriaValues[i]"]`, the operators `select[name="criteriaColumnOperators[i]"]`, the column types (lowercase MySQL types such as `varchar(255)`) `input[name="criteriaColumnTypes[i]"]`. The default `LIKE %...%` is applied only where the column's base type (`baseColumnType()`: `varchar(255)` → `varchar`) is in the `likeColumnTypes` preference: phpMyAdmin offers `LIKE` on number and date columns too, so the option list alone doesn't identify a text column.
 
 Every POST sends `ajax_request`, `server` and the token from `input[name="token"]` (falling back to `CommonParams`). Requests go through `pageFetch`, which is `content.fetch` in Firefox so the request carries the page's origin.
 
@@ -43,7 +43,7 @@ Identify a tab by its url's `route` parameter (`/table/search`), never by its la
 
 ## Settings
 
-Every preference is declared once in `PMA_TOOLS_PREFERENCES.DEFINITIONS` with its allowed values and fallback, and stored in `storage.sync`. Open tabs follow changes through `onChange`. A new option is one definition, one radio group in its `options.html` section and one entry in the loop in `options.js`.
+Every preference is declared once in `PMA_TOOLS_PREFERENCES.DEFINITIONS` and stored in `storage.sync`: either a choice (`values` plus `fallback`), or a list of names (`list: true` plus a `fallback` list, cleaned by `normalizeName()`; an empty list is kept, a missing or corrupt one falls back). Open tabs follow changes through `onChange`. A new choice is one definition, one radio group in its `options.html` section and one entry in the loop in `options.js`; a list has its own editor block in `options.js`, like `likeColumnTypes`.
 
 The theme is applied as `data-theme` (`light` / `dark`, absent for system) on the palette's shadow host and on the options page's root. Each stylesheet defines its dark colours twice: under `prefers-color-scheme: dark` with `:not([data-theme="light"])`, and under `[data-theme="dark"]`.
 
