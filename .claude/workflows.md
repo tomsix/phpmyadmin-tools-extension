@@ -11,7 +11,7 @@ A Firefox version number can be used only once per add-on, listed and unlisted t
 - **Firefox:** only through the public listing at https://addons.mozilla.org/firefox/addon/phpmyadmin-tools/. Never sign self-distributed (unlisted) versions again, and never attach a Firefox file to a GitHub release.
 - **Chrome, Edge, Brave:** the Chrome zip on the GitHub release, loaded unpacked.
 
-`npm run submit:firefox` submits `dist/firefox` for the listing (`web-ext sign --channel=listed --approval-timeout=0`) and returns without waiting for Mozilla's review; the version goes live once a reviewer approves it. It reads `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` from the shell or from `.env` (template: `.env.example`; `.env` is git-ignored).
+`npm run submit:firefox` submits `dist/firefox` for the listing (`web-ext sign --channel=listed --approval-timeout=0`) and returns without waiting for Mozilla's review; the version goes live once a reviewer approves it. With `AMO_RELEASE_NOTES_FILE` set it also sends that file's text as the version's release notes (`--amo-metadata`), under `nl` (the listing's default locale, which every other language falls back to) and `en-US`. The release workflow writes that file from the merged pull requests' titles as plain text, leaving out pull requests by bots such as Dependabot; the GitHub notes keep them. The listing's summary, description and screenshots are never sent: they are changed by hand on addons.mozilla.org. It reads `WEB_EXT_API_KEY` and `WEB_EXT_API_SECRET` from the shell or from `.env` (template: `.env.example`; `.env` is git-ignored).
 
 ## GitHub workflows
 
