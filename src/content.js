@@ -797,27 +797,37 @@
 
     async function openSnippet(result, { run, newTab }) {
         const opened = palette;
+        const needsPk = PMA_TOOLS_SNIPPETS.needs(result.snippet).pk;
+        // A new tab opened after waiting for the primary key no longer counts as the user's click, and is blocked as a
+        // popup. So the tab is opened now, empty, and the form is sent into it once the query is ready.
+        const tabName = newTab && needsPk ? `pma-tools-${Date.now()}` : null;
+        const tab = tabName === null ? null : window.open('about:blank', tabName);
+        const fail = (message) => {
+            tab?.close();
+            showNotice(message);
+        };
         let pk = [];
-        if (PMA_TOOLS_SNIPPETS.needs(result.snippet).pk) {
+        if (needsPk) {
             try {
                 pk = await getPrimaryKey(result);
             } catch (error) {
-                showNotice(error.message);
+                fail(error.message);
                 return;
             }
             if (pk.length === 0) {
-                showNotice(`${getTargetText(result)} has no primary key`);
+                fail(`${getTargetText(result)} has no primary key`);
                 return;
             }
         }
         if (palette !== opened) {
+            tab?.close();
             return;
         }
         // Running skips the SQL tab where the user would see the query, so a name that could change it is refused.
         if (run) {
             const unsafe = getNamesToFill(result.snippet, { db: result.db, table: result.table, pk }).find((name) => !isPlainIdentifier(name));
             if (unsafe !== undefined) {
-                showNotice(`Not run: the name "${unsafe}" could change the query. Press Enter to check it in the SQL tab first.`);
+                fail(`Not run: the name "${unsafe}" could change the query. Press Enter to check it in the SQL tab first.`);
                 return;
             }
         }
@@ -831,7 +841,7 @@
             ...target,
             token: getToken(),
             sql_query: PMA_TOOLS_SNIPPETS.fill(result.snippet, { db: result.db, table: result.table, pk }),
-        }, newTab);
+        }, tabName ?? (newTab ? '_blank' : null));
     }
 
     // Only the names the query actually contains: {table} alone never puts the database name in it.
@@ -845,13 +855,17 @@
         return /^[\p{L}\p{N}_$-]+$/u.test(name) && !name.includes('--');
     }
 
-    function submitForm(action, fields, newTab) {
+    // target is null for this tab, '_blank' for a new one, or the name of a tab opened earlier.
+    function submitForm(action, fields, target) {
         const form = document.createElement('form');
         form.method = 'post';
         form.action = action;
         form.hidden = true;
-        if (newTab) {
-            form.target = '_blank';
+        if (target !== null) {
+            form.target = target;
+        }
+        // noopener would make the browser look past a tab opened earlier by its name.
+        if (target === '_blank') {
             form.rel = 'noopener';
         }
         for (const [name, value] of Object.entries(fields)) {
