@@ -131,6 +131,8 @@ Open the settings with the phpMyAdmin Tools button in phpMyAdmin's top bar, or:
 - **Chrome, Edge, Brave:** right-click the extension's icon in the toolbar and choose **Options**.
 - **Firefox:** open `about:addons`, choose phpMyAdmin Tools and go to **Options**.
 
+The version you're running is shown under the title at the top, which helps when you report a problem.
+
 The settings have two tabs. **Snippets** holds your SQL snippets: add one with the form at the bottom, and use **Edit** or **Delete** next to a snippet to change it (**Undo** brings a deleted one back). **Settings** holds the rest:
 
 - **Keyboard shortcuts** for opening the search and switching tabs. Click **Add** and press the keys you want, or tap Shift, Ctrl, Alt or ⌘ twice for a double tap; **×** removes a shortcut and **Reset shortcuts to defaults** brings back the original ones. You can give an action more than one shortcut. A shortcut without Ctrl, Alt or ⌘ only works when you're not typing in a field; a double tap works everywhere, because it types nothing. The keys inside the search box (Enter, the Tab key, the arrows and Esc) can't be changed. Ctrl+K is left to phpMyAdmin, which opens its SQL console with it.

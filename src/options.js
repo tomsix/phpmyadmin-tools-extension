@@ -408,3 +408,28 @@ for (const [key, fieldsetId, statusId, apply] of [
 
     render();
 })();
+
+(async () => {
+    const extensionApi = globalThis.browser ?? globalThis.chrome;
+    const element = document.getElementById('version');
+    element.textContent = `Version ${extensionApi.runtime.getManifest().version}`;
+
+    // Only a local build (npm run build) ships build-info.json; a released version has none.
+    let info;
+    try {
+        info = await (await fetch('build-info.json')).json();
+    } catch {
+        return;
+    }
+    const parts = [];
+    if (info.branch) {
+        const code = document.createElement('code');
+        code.textContent = `${info.branch} @ ${info.commit}${info.dirty ? ' + uncommitted changes' : ''}`;
+        parts.push(code);
+    }
+    const builtAt = new Date(info.builtAt);
+    if (!Number.isNaN(builtAt.getTime())) {
+        parts.push(`built ${builtAt.toLocaleString()}`);
+    }
+    element.append(' · local build', ...parts.flatMap((part) => [' · ', part]));
+})();

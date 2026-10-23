@@ -66,6 +66,15 @@
             background: #ffffff;
         }
 
+        .version {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .version code {
+            font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
+        }
+
         h1 {
             margin: 0;
             font-size: 20px;
@@ -399,7 +408,10 @@
 <body>
     <header>
         <img src="icons/icon-128.png" alt="" width="48" height="48">
-        <h1>phpMyAdmin Tools</h1>
+        <div>
+            <h1>phpMyAdmin Tools</h1>
+            <div class="version" id="version"></div>
+        </div>
     </header>
 
     <div class="tabs" role="tablist" aria-label="Settings pages">
