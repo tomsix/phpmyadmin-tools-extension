@@ -8,6 +8,7 @@ A browser extension for Chrome and Firefox that lets you move around phpMyAdmin 
 - Jump straight to a tab such as Structure or SQL, or to a column's search field.
 - Switch to the next or previous tab with a shortcut.
 - Search text columns with "contains" (`LIKE %...%`) by default.
+- Keep SQL snippets and open them on any table from the same search box.
 
 It works with phpMyAdmin 5.1 and later, including 6.0. It is not affiliated with the phpMyAdmin project.
 
@@ -81,6 +82,36 @@ On a table's Search tab, a second `/` lists the table's columns. Choose one, and
 | `shop.orders/Search/mail` | the `email` column |
 | `//mail` | the `email` column of the table you're on |
 
+## SQL snippets
+
+Save queries you use often under **Snippets** in the settings, with a name if you like. Placeholders are filled in with the names of where you use the snippet:
+
+| Placeholder | Becomes |
+| --- | --- |
+| `{db}` | the database |
+| `{table}` | the table |
+| `{pk}` | the table's primary key column; a key of several columns becomes `a, b` |
+
+So ``SELECT * FROM `{table}` ORDER BY {pk} DESC LIMIT 50`` shows the newest rows of whatever table you're on. Names are filled in as they are: put backticks around a placeholder when a name may contain a space or a dash.
+
+Type part of a snippet's name in the search box to use it on the page you're on, or put it after a `/` to use it on another database or table:
+
+| You type | You get |
+| --- | --- |
+| `latest` | the snippet *Latest rows* on the table you're on |
+| `shop.orders/latest` | the same snippet on the `orders` table |
+| `shop.orders/` | the `orders` table's tabs, followed by every snippet |
+
+| Key | What it does |
+| --- | --- |
+| `↵` Enter | Open the SQL tab with the query filled in, so you can check it and click **Go** |
+| `⌥↵` / `Alt+↵` | Run the query straight away |
+| `⌘↵` / `Ctrl+↵` | Open the SQL tab in a new browser tab |
+
+A snippet only shows up where its placeholders can be filled in: one with `{table}` or `{pk}` needs a table, one with `{db}` a database. A snippet without a name is found by its first line. Snippets appear once you type something, so the empty search box still lists the tables of the database you're in; a `/` with nothing after it lists the page's tabs followed by the snippets that fit it.
+
+Snippets are kept with your other settings in your browser account's sync, which holds about 8 KB of snippets, roughly 30 short queries. The settings page tells you when a change doesn't fit.
+
 ## Switch tabs
 
 Press **⌥←** / **⌥→** on a Mac, or **Alt+Shift+←** / **Alt+Shift+→** on Windows and Linux, to go to the previous or next tab (Browse, Structure, SQL, …). After the last tab you're back at the first.
@@ -100,7 +131,7 @@ Open the settings with the phpMyAdmin Tools button in phpMyAdmin's top bar, or:
 - **Chrome, Edge, Brave:** right-click the extension's icon in the toolbar and choose **Options**.
 - **Firefox:** open `about:addons`, choose phpMyAdmin Tools and go to **Options**.
 
-You can change:
+The settings have two tabs. **Snippets** holds your SQL snippets: add one with the form at the bottom, and use **Edit** or **Delete** next to a snippet to change it (**Undo** brings a deleted one back). **Settings** holds the rest:
 
 - **Keyboard shortcuts** for opening the search and switching tabs. Click **Add** and press the keys you want, or tap Shift, Ctrl, Alt or ⌘ twice for a double tap; **×** removes a shortcut and **Reset shortcuts to defaults** brings back the original ones. You can give an action more than one shortcut. A shortcut without Ctrl, Alt or ⌘ only works when you're not typing in a field; a double tap works everywhere, because it types nothing. The keys inside the search box (Enter, the Tab key, the arrows and Esc) can't be changed. Ctrl+K is left to phpMyAdmin, which opens its SQL console with it.
 - **Appearance:** light or dark, or follow your computer's setting. This applies to the search box and the settings page; phpMyAdmin itself keeps its own look.

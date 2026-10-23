@@ -238,3 +238,173 @@ for (const [key, fieldsetId, statusId, apply] of [
 
     render();
 })();
+
+{
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+
+    // The page opens on the tab named in the address, so a reload keeps it: options.html#settings.
+    const select = (tab, focus = false) => {
+        for (const other of tabs) {
+            const isSelected = other === tab;
+            other.setAttribute('aria-selected', String(isSelected));
+            other.tabIndex = isSelected ? 0 : -1;
+            document.getElementById(other.getAttribute('aria-controls')).hidden = !isSelected;
+        }
+        history.replaceState(null, '', tab === tabs[0] ? location.pathname : `#${tab.id.replace(/^tab-/, '')}`);
+        if (focus) {
+            tab.focus();
+        }
+    };
+
+    tabs.forEach((tab, i) => {
+        tab.addEventListener('click', () => select(tab));
+        tab.addEventListener('keydown', (event) => {
+            const next = { ArrowLeft: i - 1, ArrowRight: i + 1, Home: 0, End: tabs.length - 1 }[event.key];
+            if (next !== undefined) {
+                event.preventDefault();
+                select(tabs[(next + tabs.length) % tabs.length], true);
+            }
+        });
+    });
+
+    select(tabs.find((tab) => `#${tab.id.replace(/^tab-/, '')}` === location.hash) ?? tabs[0]);
+}
+
+(async () => {
+    const list = document.getElementById('snippet-list');
+    const form = document.getElementById('snippet-form');
+    const heading = document.getElementById('snippet-form-heading');
+    const nameInput = document.getElementById('snippet-name');
+    const sqlInput = document.getElementById('snippet-sql');
+    const submit = document.getElementById('snippet-submit');
+    const cancel = document.getElementById('snippet-cancel');
+    const status = document.getElementById('snippets-status');
+    let snippets = await PMA_TOOLS_SNIPPETS.load();
+    let editingId = null;
+
+    const showStatus = (message, isError = false, undo = null) => {
+        status.replaceChildren(message);
+        status.classList.toggle('error', isError);
+        if (undo !== null) {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = 'Undo';
+            button.addEventListener('click', undo);
+            status.append(button);
+        }
+    };
+
+    const save = async (next, message, undo = null) => {
+        try {
+            await PMA_TOOLS_SNIPPETS.save(next);
+            snippets = PMA_TOOLS_SNIPPETS.normalize(next);
+            render();
+            showStatus(message, false, undo);
+            return true;
+        } catch (error) {
+            // storage.sync keeps about 8 KB per setting, which is where a long list of snippets ends.
+            showStatus(/quota/i.test(error.message)
+                ? 'Couldn\'t save: the snippets are too long for browser sync. Shorten or delete one.'
+                : `Couldn't save: ${error.message}`, true);
+            return false;
+        }
+    };
+
+    const edit = (snippet) => {
+        editingId = snippet?.id ?? null;
+        nameInput.value = snippet?.name ?? '';
+        sqlInput.value = snippet?.sql ?? '';
+        heading.textContent = snippet === null ? 'Add a snippet' : 'Edit snippet';
+        submit.textContent = snippet === null ? 'Add snippet' : 'Save changes';
+        cancel.hidden = snippet === null;
+        render();
+        if (snippet !== null) {
+            form.scrollIntoView({ block: 'nearest' });
+            sqlInput.focus();
+        }
+    };
+
+    const render = () => {
+        list.replaceChildren(...snippets.map((snippet) => {
+            const row = document.createElement('div');
+            row.className = 'snippet';
+            row.classList.toggle('editing', snippet.id === editingId);
+
+            const body = document.createElement('div');
+            body.className = 'snippet-body';
+            const name = document.createElement('div');
+            name.className = 'snippet-name';
+            name.classList.toggle('untitled', snippet.name === '');
+            name.textContent = snippet.name !== '' ? snippet.name : 'No name: found by its first line';
+            const sql = document.createElement('pre');
+            sql.textContent = snippet.sql;
+            body.append(name, sql);
+
+            const actions = document.createElement('div');
+            actions.className = 'snippet-actions';
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.textContent = 'Edit';
+            editButton.setAttribute('aria-label', `Edit ${PMA_TOOLS_SNIPPETS.label(snippet)}`);
+            editButton.addEventListener('click', () => edit(snippet));
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.textContent = 'Delete';
+            deleteButton.setAttribute('aria-label', `Delete ${PMA_TOOLS_SNIPPETS.label(snippet)}`);
+            deleteButton.addEventListener('click', () => {
+                const before = snippets;
+                if (editingId === snippet.id) {
+                    edit(null);
+                }
+                save(snippets.filter((item) => item.id !== snippet.id), `Deleted ${PMA_TOOLS_SNIPPETS.label(snippet)}`,
+                    () => save(before, `Restored ${PMA_TOOLS_SNIPPETS.label(snippet)}`));
+            });
+            actions.append(editButton, deleteButton);
+
+            row.append(body, actions);
+            return row;
+        }));
+        if (snippets.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-list';
+            empty.textContent = 'No snippets yet.';
+            list.append(empty);
+        }
+    };
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const snippet = { id: editingId ?? PMA_TOOLS_SNIPPETS.createId(), name: nameInput.value.trim(), sql: sqlInput.value.trim() };
+        if (snippet.sql === '') {
+            showStatus('Enter a query.', true);
+            sqlInput.focus();
+            return;
+        }
+        const isNew = editingId === null || !snippets.some((item) => item.id === editingId);
+        const next = isNew ? [...snippets, snippet] : snippets.map((item) => (item.id === snippet.id ? snippet : item));
+        if (await save(next, `${isNew ? 'Added' : 'Saved'} ${PMA_TOOLS_SNIPPETS.label(snippet)}`)) {
+            edit(null);
+        }
+    });
+
+    cancel.addEventListener('click', () => {
+        edit(null);
+        showStatus('');
+    });
+
+    // Inserts at the cursor, replacing a selection, as typing would.
+    document.getElementById('snippet-placeholders').addEventListener('click', (event) => {
+        const placeholder = event.target.closest('[data-placeholder]')?.dataset.placeholder;
+        if (placeholder !== undefined) {
+            sqlInput.focus();
+            sqlInput.setRangeText(placeholder, sqlInput.selectionStart, sqlInput.selectionEnd, 'end');
+        }
+    });
+
+    PMA_TOOLS_SNIPPETS.onChange((changed) => {
+        snippets = changed;
+        render();
+    });
+
+    render();
+})();

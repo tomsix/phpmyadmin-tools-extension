@@ -25,6 +25,7 @@
                 "shortcuts.js",
                 "preferences.js",
                 "palette-styles.js",
+                "snippets.js",
                 "content.js"
             ],
             "run_at": "document_idle"
