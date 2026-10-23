@@ -157,3 +157,84 @@ for (const [key, fieldsetId, statusId, apply] of [
         });
     })();
 }
+
+(async () => {
+    const list = document.getElementById('like-column-types');
+    const form = document.getElementById('add-like-column-type');
+    const input = document.getElementById('like-column-type');
+    const status = document.getElementById('like-column-types-status');
+    let types = await PMA_TOOLS_PREFERENCES.load('likeColumnTypes');
+
+    const showStatus = (message, isError = false) => {
+        status.textContent = message;
+        status.classList.toggle('error', isError);
+    };
+
+    // Returns whether the change was stored, so the caller only clears its input on success.
+    const save = async (next, message) => {
+        try {
+            await PMA_TOOLS_PREFERENCES.save('likeColumnTypes', next);
+        } catch (error) {
+            showStatus(`Couldn't save: ${error.message}`, true);
+            return false;
+        }
+        types = next;
+        render();
+        showStatus(message);
+        return true;
+    };
+
+    const render = () => {
+        if (types.length === 0) {
+            list.replaceChildren('No types: every column keeps phpMyAdmin\'s default.');
+            return;
+        }
+        list.replaceChildren(...[...types].sort((a, b) => a.localeCompare(b)).map((type) => {
+            const chip = document.createElement('span');
+            chip.className = 'chip';
+            const remove = document.createElement('button');
+            remove.type = 'button';
+            remove.textContent = '×';
+            remove.setAttribute('aria-label', `Remove ${type}`);
+            remove.addEventListener('click', () => save(types.filter((item) => item !== type), `Removed ${type}`));
+            chip.append(type, remove);
+            return chip;
+        }));
+    };
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        // Accepts a type as phpMyAdmin shows it, so varchar(255) adds varchar.
+        const type = PMA_TOOLS_PREFERENCES.normalizeName(PMA_TOOLS_PREFERENCES.baseColumnType(input.value));
+        if (type === null) {
+            showStatus('Enter a column type such as enum or json.', true);
+            return;
+        }
+        if (types.includes(type)) {
+            showStatus(`${type} is already in the list.`, true);
+            return;
+        }
+        if (await save([...types, type], `Added ${type}`)) {
+            input.value = '';
+        }
+    });
+
+    document.getElementById('reset-like-column-types').addEventListener('click', async () => {
+        try {
+            await PMA_TOOLS_PREFERENCES.reset('likeColumnTypes');
+        } catch (error) {
+            showStatus(`Couldn't reset: ${error.message}`, true);
+            return;
+        }
+        types = PMA_TOOLS_PREFERENCES.DEFINITIONS.likeColumnTypes.fallback;
+        render();
+        showStatus('Types reset to the defaults');
+    });
+
+    PMA_TOOLS_PREFERENCES.onChange('likeColumnTypes', (changed) => {
+        types = changed;
+        render();
+    });
+
+    render();
+})();
