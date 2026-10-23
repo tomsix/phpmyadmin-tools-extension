@@ -352,12 +352,17 @@ for (const [key, fieldsetId, statusId, apply] of [
             deleteButton.textContent = 'Delete';
             deleteButton.setAttribute('aria-label', `Delete ${PMA_TOOLS_SNIPPETS.label(snippet)}`);
             deleteButton.addEventListener('click', () => {
-                const before = snippets;
+                const position = snippets.findIndex((item) => item.id === snippet.id);
                 if (editingId === snippet.id) {
                     edit(null);
                 }
-                save(snippets.filter((item) => item.id !== snippet.id), `Deleted ${PMA_TOOLS_SNIPPETS.label(snippet)}`,
-                    () => save(before, `Restored ${PMA_TOOLS_SNIPPETS.label(snippet)}`));
+                // Undo puts back only this snippet, so changes made in another window since then are kept.
+                const undo = () => {
+                    const next = snippets.filter((item) => item.id !== snippet.id);
+                    next.splice(Math.min(position, next.length), 0, snippet);
+                    save(next, `Restored ${PMA_TOOLS_SNIPPETS.label(snippet)}`);
+                };
+                save(snippets.filter((item) => item.id !== snippet.id), `Deleted ${PMA_TOOLS_SNIPPETS.label(snippet)}`, undo);
             });
             actions.append(editButton, deleteButton);
 
