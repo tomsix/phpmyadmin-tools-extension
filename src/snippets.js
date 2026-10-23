@@ -3,6 +3,8 @@ var PMA_TOOLS_SNIPPETS = (() => {
     const extensionApi = globalThis.browser ?? globalThis.chrome;
     const STORAGE_KEY = 'snippets';
     const PLACEHOLDER_PATTERN = /\{(db|table|pk)\}/g;
+    // Letters, digits, spaces, - and _: a / would split the palette's query, other symbols only get in the way of typing it.
+    const NAME_PATTERN = /^[\p{L}\p{N} _-]*$/u;
 
     function normalize(value) {
         if (!Array.isArray(value)) {
@@ -19,11 +21,20 @@ var PMA_TOOLS_SNIPPETS = (() => {
                 id = createId();
             }
             ids.add(id);
-            return [{ id, name: typeof snippet.name === 'string' ? snippet.name.trim() : '', sql }];
+            return [{ id, name: cleanName(snippet.name), sql }];
         });
     }
 
     // randomUUID() only exists in secure contexts, and phpMyAdmin often runs on plain http.
+    function isValidName(name) {
+        return NAME_PATTERN.test(name.trim());
+    }
+
+    // Stored names are cleaned too, so one synced from elsewhere can't bring a / into the palette.
+    function cleanName(name) {
+        return typeof name === 'string' ? name.replace(/[^\p{L}\p{N} _-]/gu, '').replace(/\s+/g, ' ').trim() : '';
+    }
+
     function createId() {
         return crypto.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
     }
@@ -70,5 +81,5 @@ var PMA_TOOLS_SNIPPETS = (() => {
         });
     }
 
-    return { normalize, createId, label, placeholders, needs, fill, load, save, onChange };
+    return { normalize, isValidName, createId, label, placeholders, needs, fill, load, save, onChange };
 })();

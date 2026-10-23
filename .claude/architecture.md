@@ -45,7 +45,7 @@ Identify a tab by its url's `route` parameter (`/table/search`), never by its la
 
 ## Snippets
 
-A snippet is `{ id, name, sql }`, stored as one list under `snippets` in `storage.sync` by `PMA_TOOLS_SNIPPETS` (`snippets.js`), not as a preference: it isn't a choice or a list of names. `storage.sync` keeps about 8 KB per key, so the options page reports a quota error instead of losing the change.
+A snippet is `{ id, name, sql }`; a name holds only letters, digits, spaces, `-` and `_` (`isValidName()` on the options page, `cleanName()` on whatever is stored), because a `/` would split the palette's query. It is stored as one list under `snippets` in `storage.sync` by `PMA_TOOLS_SNIPPETS` (`snippets.js`), not as a preference: it isn't a choice or a list of names. `storage.sync` keeps about 8 KB per key, so the options page reports a quota error instead of losing the change.
 
 `{db}`, `{table}` and `{pk}` are replaced by `fill()` with the names as they are; the snippet's author adds backticks. `needs()` says what a snippet requires: a snippet is only listed for a target that names its database and, for `{table}` or `{pk}`, its table. The primary key is fetched when the snippet is listed and cached per table in `primaryKeyCache`; a table without one gets a notice in the palette instead of a half-filled query.
 

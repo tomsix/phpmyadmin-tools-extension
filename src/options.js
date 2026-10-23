@@ -375,6 +375,11 @@ for (const [key, fieldsetId, statusId, apply] of [
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const snippet = { id: editingId ?? PMA_TOOLS_SNIPPETS.createId(), name: nameInput.value.trim(), sql: sqlInput.value.trim() };
+        if (!PMA_TOOLS_SNIPPETS.isValidName(snippet.name)) {
+            showStatus('A name can only contain letters, digits, spaces, - and _.', true);
+            nameInput.focus();
+            return;
+        }
         if (snippet.sql === '') {
             showStatus('Enter a query.', true);
             sqlInput.focus();

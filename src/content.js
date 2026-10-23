@@ -1010,7 +1010,8 @@
     function getCompletion(result, currentValue) {
         const prefix = result.current ? '' : getTargetText(result);
         if (result.type === 'snippet') {
-            return `${prefix}/${result.label}`;
+            // A name has no slash, but a snippet without one goes by its query's first line, which can.
+            return `${prefix}/${result.label.replaceAll('/', '')}`;
         }
         if (result.type === 'column') {
             return `${prefix}/${result.tabLabel}/${result.column}`;

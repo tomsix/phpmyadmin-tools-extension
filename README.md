@@ -84,7 +84,7 @@ On a table's Search tab, a second `/` lists the table's columns. Choose one, and
 
 ## SQL snippets
 
-Save queries you use often under **Snippets** in the settings, with a name if you like. Placeholders are filled in with the names of where you use the snippet:
+Save queries you use often under **Snippets** in the settings, with a name if you like: letters, digits, spaces, `-` and `_`. Placeholders are filled in with the names of where you use the snippet:
 
 | Placeholder | Becomes |
 | --- | --- |
